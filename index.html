@@ -30860,7 +30860,11 @@ const BUILD = {
 
 
 // ── Placed pieces array ──────────────────────────────────────────────
-const placedPieces = [];
+// `var`, not `const` — upstream modules check `typeof placedPieces !== 'undefined'`
+// as a feature-detect guard. In the merged build, a `const` would put the
+// name in TDZ for every prior module, and `typeof x` throws on TDZ bindings
+// (unlike truly-undeclared globals). See trees.js spawnBiomeTreesInitial.
+var placedPieces = [];
 var _pieceMeshDirty = true;
 var _snapsDirty = true;  // set true when placedPieces changes — avoids per-frame snap rebuild
 
