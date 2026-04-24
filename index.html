@@ -4669,7 +4669,7 @@ var BIOME_ID_NAMES = ['highDesert', 'grassland', 'montane', 'subalpine', 'alpine
 var _tGrass = null, _tRock = null, _tDirt = null, _tRoad = null;
 (function _loadTerrainTextures() {
     var loader = new THREE.TextureLoader();
-    var texPath = '/src/_assets/textures/';
+    var texPath = '/_assets/textures/';
     function _setupTex(tex) {
         tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
         tex.minFilter = THREE.LinearMipmapLinearFilter;
@@ -6206,7 +6206,7 @@ function _ensureLogBarkTex() {
     if (_logBarkTex || _logBarkTexLoading) return _logBarkTex;
     _logBarkTexLoading = true;
     new THREE.TextureLoader().load(
-        '/src/_assets/textures/pondoBark.png',
+        '/_assets/textures/pondoBark.png',
         function(tex) {
             // Convert to grayscale so each log can tint via material.color
             // to its species bark hue. Without this, every log wears pondo's
@@ -16267,8 +16267,8 @@ function _loadStepAudio() {
 
     // Use /src/ prefix for dev server compatibility — relative paths break
     // when JS is served from /modules/ instead of from within src/_tests/
-    var stepsPath = '/src/_assets/audio/character/steps/';
-    var charPath = '/src/_assets/audio/character/';
+    var stepsPath = '/_assets/audio/character/steps/';
+    var charPath = '/_assets/audio/character/';
 
     function _fetchStep(url, filename, terrain) {
         fetch(url).then(function(r) {
@@ -31469,7 +31469,7 @@ function _getFoundationMaterial() {
         color: new THREE.Color(window.FOUNDATION_TEX.tint).multiplyScalar(window.FOUNDATION_TEX.brightness),
     });
     new THREE.TextureLoader().load(
-        '/src/_assets/textures/stoneFoundation.png',
+        '/_assets/textures/stoneFoundation.png',
         function(tex) {
             tex.wrapS = THREE.RepeatWrapping;
             tex.wrapT = THREE.RepeatWrapping;
