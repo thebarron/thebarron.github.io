@@ -27821,16 +27821,44 @@ function _buildIconMesh(type) {
         return g;
     }
     if (type === 'bedroll_item') {
+        // Rolled-up sleeping bag — sage green cylinder with two compression
+        // straps (dark cord rings) + a small carry loop on top.
         var g = new THREE.Group();
-        var fMat = _pooledMat(0xb8a870);
-        var pad = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 0.22), fMat);
-        pad.position.y = 0.02;
-        g.add(pad);
-        var frMat = _pooledMat(0x6e5535);
-        var fr = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.35, 4), frMat);
-        fr.rotation.z = Math.PI / 2;
-        fr.position.y = -0.01;
-        g.add(fr);
+        var bagMat   = _pooledMat(0x3a5828);    // forest sage shell
+        var strapMat = _pooledMat(0x1e3a18);    // dark fiber strap
+        var loopMat  = _pooledMat(0x6e5535);    // tan carry-loop cord
+
+        // Main roll body
+        var roll = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 0.42, 12), bagMat);
+        roll.rotation.z = Math.PI / 2;        // long axis = X
+        g.add(roll);
+
+        // End caps slightly inset showing lighter rolled fabric — sphere disks
+        var capMat = _pooledMat(0x88a878);
+        var capL = new THREE.Mesh(new THREE.CircleGeometry(0.094, 12), capMat);
+        capL.position.set(0.211, 0, 0);
+        capL.rotation.y = Math.PI / 2;
+        g.add(capL);
+        var capR = new THREE.Mesh(new THREE.CircleGeometry(0.094, 12), capMat);
+        capR.position.set(-0.211, 0, 0);
+        capR.rotation.y = -Math.PI / 2;
+        g.add(capR);
+
+        // Two compression straps (torus rings hugging the roll)
+        for (var si = 0; si < 2; si++) {
+            var x = -0.10 + si * 0.20;
+            var strap = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.012, 4, 12), strapMat);
+            strap.rotation.y = Math.PI / 2;
+            strap.position.set(x, 0, 0);
+            g.add(strap);
+        }
+
+        // Small carry loop on top
+        var loop = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.008, 4, 8, Math.PI), loopMat);
+        loop.position.set(0, 0.13, 0);
+        loop.rotation.x = Math.PI / 2;
+        g.add(loop);
+
         return g;
     }
     if (type === 'watering_can') {
@@ -37300,28 +37328,72 @@ function _buildLeanToModel(ghost) {
     return g;
 }
 
-function _buildBedrollModel(ghost) {
+// Sleeping bag — rectangular camping bag laid out on the ground (Outwell-
+// style classic, not a mummy). Player-sized: ~1.9m × 0.72m × 14cm tall.
+// Dark forest-sage outer shell with horizontal quilting stripes; the head
+// end shows a cream-colored hood opening + a small raised hood lip behind.
+function _buildSleepingBagModel(ghost) {
     var g = new THREE.Group();
-    var fiberMat = ghost ? _placementGhostMat : _pooledMat(0xb8a870);
-    var frameMat = ghost ? _placementGhostMat : _pooledMat(0x6e5535);
+    var bagMat    = ghost ? _placementGhostMat : _pooledMat(0x3a5828);   // dark forest sage outer
+    var liningMat = ghost ? _placementGhostMat : _pooledMat(0x88a878);   // bright sage interior lining
+    var seamMat   = ghost ? _placementGhostMat : _pooledMat(0x2a3e1e);   // darker stitch line
 
-    // Firewood frame (4 pieces in rectangle)
-    var positions = [[-0.4, 0], [0.4, 0], [0, -0.25], [0, 0.25]];
-    for (var i = 0; i < 4; i++) {
-        var fw = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.8, 5), frameMat);
-        fw.rotation.z = Math.PI / 2;
-        fw.rotation.y = i < 2 ? 0 : Math.PI / 2;
-        fw.position.set(positions[i][0], 0.04, positions[i][1]);
-        g.add(fw);
-    }
+    var BAG_LEN  = 1.90;     // long axis = Z
+    var BAG_W    = 0.72;
+    var BAG_H    = 0.14;
+    var HOOD_LEN = 0.55;     // length of the head/hood opening section
 
-    // Fiber padding (flattened box)
-    var pad = new THREE.Mesh(
-        new THREE.BoxGeometry(0.7, 0.08, 0.45),
-        fiberMat
+    // Main body — single dark-green rounded rectangle.
+    var body = new THREE.Mesh(new THREE.BoxGeometry(BAG_W, BAG_H, BAG_LEN), bagMat);
+    body.position.set(0, BAG_H / 2, 0);
+    g.add(body);
+
+    // Cream lining at the head opening — visible flat oval on the top face,
+    // matches the "cream interior peeking out" from the reference photo.
+    var opening = new THREE.Mesh(
+        new THREE.BoxGeometry(BAG_W * 0.82, 0.025, HOOD_LEN * 0.92),
+        liningMat
     );
-    pad.position.set(0, 0.08, 0);
-    g.add(pad);
+    opening.position.set(0, BAG_H + 0.012, BAG_LEN / 2 - HOOD_LEN / 2 - 0.04);
+    g.add(opening);
+
+    // Hood lip — small raised dark-green ridge at the very head end (the
+    // back edge of the hood opening, where it folds back to expose lining).
+    var hoodLip = new THREE.Mesh(
+        new THREE.BoxGeometry(BAG_W, 0.05, 0.06),
+        bagMat
+    );
+    hoodLip.position.set(0, BAG_H + 0.04, BAG_LEN / 2 - 0.03);
+    g.add(hoodLip);
+
+    // Side flaps that frame the hood opening (thin raised borders along the
+    // top edges, head end only) — gives the hood a 3D feel from any angle.
+    var sideFlapL = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.04, HOOD_LEN),
+        bagMat
+    );
+    sideFlapL.position.set(-BAG_W / 2 + 0.025, BAG_H + 0.03, BAG_LEN / 2 - HOOD_LEN / 2);
+    g.add(sideFlapL);
+    var sideFlapR = sideFlapL.clone();
+    sideFlapR.position.x = BAG_W / 2 - 0.025;
+    g.add(sideFlapR);
+
+    // Quilting stripes — thin horizontal lines across the body (cosmetic
+    // detail that makes the bag read as fabric rather than a plain box).
+    var stripeN = 9;
+    var qStart  = -BAG_LEN / 2 + 0.12;
+    var qEnd    = BAG_LEN / 2 - HOOD_LEN - 0.10;
+    for (var qi = 0; qi < stripeN; qi++) {
+        var t = qi / (stripeN - 1);
+        var z = qStart + (qEnd - qStart) * t;
+        var stripe = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.006, 0.006, BAG_W * 0.96, 4),
+            seamMat
+        );
+        stripe.rotation.z = Math.PI / 2;          // lay along X
+        stripe.position.set(0, BAG_H + 0.001, z);
+        g.add(stripe);
+    }
 
     return g;
 }
@@ -37615,7 +37687,7 @@ var _structureBuilders = {
     fire_pit: _buildFirePitModel,
     drying_rack: _buildDryingRackModel,
     lean_to: _buildLeanToModel,
-    bedroll: _buildBedrollModel,
+    bedroll: _buildSleepingBagModel,
     workbench: _buildWorkbenchModel,
     wood_chest: _buildWoodChestModel,
     door: _buildDoorModel,
@@ -38030,7 +38102,7 @@ function _doPlacement() {
     } else if (s.id === 'drying_rack') {
         _setupDryingRackInteraction(obj, finalModel, gp);
     } else if (s.id === 'bedroll') {
-        _setupBedrollInteraction(obj, finalModel);
+        _setupSleepingBagInteraction(obj, finalModel);
     } else if (s.id === 'workbench') {
         _setupWorkbenchPrimInteraction(obj, finalModel);
     } else if (s.id === 'wood_chest') {
@@ -38633,15 +38705,139 @@ function _findNearbyFirePit(pos, radius) {
     return best;
 }
 
-// ── Bedroll ──
-function _setupBedrollInteraction(obj, model) {
+// ── Sleeping Bag ──
+// E opens a 3-button menu: Sleep / Pick Up / Close.
+// "Sleep" calls doSleep() (the time-advance + fade overlay flow).
+// "Pick Up" removes the placed structure from the world and returns
+// `bedroll_item` to inventory. The structure persists in placedStructures
+// + saves until explicitly picked up.
+function _setupSleepingBagInteraction(obj, model) {
+    obj.isBedroll = true;
     obj.onInspect = {
         label: 'Sleeping Bag',
         action: function() {
-            showToast('Sleeping Bag  —  sleep here to restore stamina [E at night]');
+            _openSleepingBagMenu(obj, model);
         }
     };
-    obj.isBedroll = true;
+}
+
+// Lazy-init small modal for Sleep / Pick Up / Close
+var _sbMenuEl, _sbScrimEl;
+function _ensureSleepingBagMenu() {
+    if (_sbMenuEl) return;
+    _sbScrimEl = document.createElement('div');
+    _sbScrimEl.id = 'sbScrim';
+    _sbScrimEl.style.cssText = [
+        'position:fixed', 'inset:0',
+        'background:var(--sov-modal-scrim, rgba(10,14,8,0.55))',
+        'display:none', 'z-index:1000',
+        'backdrop-filter:blur(2px)', '-webkit-backdrop-filter:blur(2px)',
+    ].join(';');
+    document.body.appendChild(_sbScrimEl);
+
+    _sbMenuEl = document.createElement('div');
+    _sbMenuEl.id = 'sbMenu';
+    _sbMenuEl.style.cssText = [
+        'position:fixed', 'left:50%', 'top:50%', 'transform:translate(-50%,-50%)',
+        'width:min(360px, 88vw)',
+        'background:var(--sov-panel-surface-solid, rgba(22,28,20,0.96))',
+        'border:1px solid var(--sov-border-panel, rgba(168,196,140,0.22))',
+        'border-radius:var(--sov-radius-lg, 12px)',
+        'padding:18px 18px 14px 18px',
+        'display:none', 'z-index:1001',
+        'box-shadow:var(--sov-shadow-soft, 0 8px 32px rgba(0,0,0,0.5))',
+        'font-family:var(--sov-font-display, system-ui, sans-serif)',
+        'color:var(--sov-text, #e8dcc0)',
+    ].join(';');
+
+    var title = document.createElement('div');
+    title.style.cssText = [
+        'font-family:var(--sov-font-mono, monospace)', 'font-size:11px',
+        'font-weight:600', 'color:var(--sov-sage-300, #a8bc8c)',
+        'letter-spacing:1.6px', 'text-transform:uppercase',
+        'border-bottom:1px solid var(--sov-border-hair, rgba(232,218,192,0.10))',
+        'padding-bottom:8px', 'margin-bottom:12px', 'text-align:center',
+    ].join(';');
+    title.textContent = 'SLEEPING BAG';
+    _sbMenuEl.appendChild(title);
+
+    var btns = document.createElement('div');
+    btns.id = 'sbBtns';
+    btns.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+    _sbMenuEl.appendChild(btns);
+
+    document.body.appendChild(_sbMenuEl);
+
+    // Tap scrim to close
+    _sbScrimEl.addEventListener('click', _closeSleepingBagMenu);
+    _sbScrimEl.addEventListener('touchend', function(e) { e.preventDefault(); _closeSleepingBagMenu(); }, { passive: false });
+}
+
+function _makeMenuBtn(label, onClick, dim) {
+    var b = document.createElement('button');
+    b.style.cssText = [
+        'background:' + (dim
+            ? 'rgba(40,32,24,0.55)'
+            : 'linear-gradient(180deg, rgba(78,100,56,0.55) 0%, rgba(58,78,38,0.65) 100%)'),
+        'border:1px solid ' + (dim ? 'var(--sov-border-hair, rgba(232,218,192,0.10))' : 'var(--sov-sage-600, #4e6438)'),
+        'border-radius:var(--sov-radius-md, 8px)',
+        'padding:12px 16px',
+        'font-family:var(--sov-font-display, system-ui, sans-serif)',
+        'font-size:15px', 'font-weight:500',
+        'color:' + (dim ? 'var(--sov-text-dim, #a8a094)' : 'var(--sov-sage-100, #e4ead4)'),
+        'text-align:center', 'cursor:pointer', 'user-select:none',
+        '-webkit-tap-highlight-color:transparent', 'min-height:44px',
+    ].join(';');
+    b.textContent = label;
+    b.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); onClick(); });
+    return b;
+}
+
+function _openSleepingBagMenu(obj, model) {
+    _ensureSleepingBagMenu();
+    var btns = document.getElementById('sbBtns');
+    btns.innerHTML = '';
+    btns.appendChild(_makeMenuBtn('Sleep', function() {
+        _closeSleepingBagMenu();
+        if (typeof doSleep === 'function') doSleep();
+        else if (typeof showToast === 'function') showToast('Sleep system not loaded');
+    }));
+    btns.appendChild(_makeMenuBtn('Pick Up', function() {
+        _closeSleepingBagMenu();
+        _pickUpSleepingBag(obj, model);
+    }));
+    btns.appendChild(_makeMenuBtn('Close', _closeSleepingBagMenu, true));
+
+    if (typeof window.gamePaused !== 'undefined') window.gamePaused = true;
+    _sbScrimEl.style.display = 'block';
+    _sbMenuEl.style.display = 'block';
+}
+
+function _closeSleepingBagMenu() {
+    if (_sbMenuEl) _sbMenuEl.style.display = 'none';
+    if (_sbScrimEl) _sbScrimEl.style.display = 'none';
+    if (typeof window.gamePaused !== 'undefined') window.gamePaused = false;
+}
+
+// Remove the placed sleeping bag from the world + give bedroll_item back.
+function _pickUpSleepingBag(obj, model) {
+    if (typeof addItem === 'function') {
+        var ok = addItem('bedroll_item', 1);
+        if (!ok) {
+            if (typeof showToast === 'function') showToast('Pack is full — make room first');
+            return;
+        }
+    }
+    obj.alive = false;
+    if (model && model.parent) model.parent.remove(model);
+    // Strip from placedStructures so save state matches
+    if (typeof placedStructures !== 'undefined') {
+        for (var i = placedStructures.length - 1; i >= 0; i--) {
+            if (placedStructures[i] === obj) { placedStructures.splice(i, 1); break; }
+        }
+    }
+    if (typeof showToast === 'function') showToast('Rolled up the sleeping bag');
+    if (typeof triggerSave === 'function') triggerSave('Sleeping bag picked up');
 }
 
 // ── Primitive Workbench ──
@@ -39243,7 +39439,7 @@ if (typeof SAVE_PROVIDERS !== 'undefined') {
             var _builders = {
                 fire_pit: _buildFirePitModel,
                 lean_to: _buildLeanToModel,
-                bedroll: _buildBedrollModel,
+                bedroll: _buildSleepingBagModel,
                 wood_chest: _buildWoodChestModel,
                 door: _buildDoorModel,
                 door_plank: _buildPlankDoorModel,
@@ -39269,7 +39465,7 @@ if (typeof SAVE_PROVIDERS !== 'undefined') {
         var _builders = buildersOverride || {
             fire_pit: _buildFirePitModel,
             lean_to: _buildLeanToModel,
-            bedroll: _buildBedrollModel,
+            bedroll: _buildSleepingBagModel,
             wood_chest: _buildWoodChestModel,
             door: _buildDoorModel,
             door_plank: _buildPlankDoorModel,
@@ -39341,7 +39537,7 @@ if (typeof SAVE_PROVIDERS !== 'undefined') {
         } else if (entry.id === 'drying_rack') {
             _setupDryingRackInteraction(obj, model, pos);
         } else if (entry.id === 'bedroll') {
-            _setupBedrollInteraction(obj, model);
+            _setupSleepingBagInteraction(obj, model);
         } else if (entry.id === 'workbench_prim' || entry.id === 'workbench') {
             if (typeof _setupWorkbenchPrimInteraction === 'function') {
                 _setupWorkbenchPrimInteraction(obj, model);
