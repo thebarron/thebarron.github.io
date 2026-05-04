@@ -1,15 +1,13 @@
 // Sovereignty — Service Worker (offline-first cache)
-const CACHE_NAME = 'sov-v2';
+const CACHE_NAME = 'sov-v4';
 
-// Cache the page + Three.js on first load
+// API paths — never cached (dev-server endpoints, dynamic data).
+// Pattern-matches against URL pathname.
+const API_PATHS = ['/character_creator/', '/map_editor/', '/character_creator/parts', '/buildings/'];
+
+// Pre-cache nothing on install — Three.js ships from same-origin _lib/ now;
+// the old r128 CDN line was dead code from the monolith era. Just take over.
 self.addEventListener('install', function(e) {
-    e.waitUntil(
-        caches.open(CACHE_NAME).then(function(cache) {
-            return cache.addAll([
-                'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
-            ]).catch(function() {});
-        })
-    );
     self.skipWaiting();
 });
 
@@ -26,9 +24,19 @@ self.addEventListener('activate', function(e) {
     self.clients.claim();
 });
 
-// Network-first for HTML + JS (always get latest during dev), cache-first for assets
+// Network-first for HTML + JS (always get latest during dev), cache-first for assets.
+// API paths are passthrough — never touched by the SW so failures don't poison
+// the cache and dynamic data is always fresh.
 self.addEventListener('fetch', function(e) {
     var url = e.request.url;
+    var pathname;
+    try { pathname = new URL(url).pathname; } catch (_) { pathname = ''; }
+
+    // API endpoints — let the network handle it directly, no cache layer.
+    for (var i = 0; i < API_PATHS.length; i++) {
+        if (pathname.indexOf(API_PATHS[i]) === 0) return;
+    }
+
     // HTML + JS files — network first, fall back to cache (dev-friendly)
     if (e.request.mode === 'navigate' || url.endsWith('.html') || url.endsWith('.js')) {
         e.respondWith(
