@@ -34248,14 +34248,33 @@ function _saveBuildingToServer(buildingId) {
         body:    JSON.stringify(data),
     }).then(function(r) { return r.json().then(function(j) { return r.ok ? j : Promise.reject(new Error(j.error || ('save failed: ' + r.status))); }); });
 }
+// fetchWithStaticFallback — try the dev-server endpoint first, fall back
+// to a static file (used by the GitHub Pages deploy where the dev server
+// doesn't exist).
+function _fetchWithStaticFallback(devPath, staticPath) {
+    return fetch(devPath, { cache: 'no-store' })
+        .then(function(r) {
+            if (r.ok) return r.json();
+            throw new Error('HTTP ' + r.status);
+        })
+        .catch(function(err) {
+            if (!staticPath) throw err;
+            return fetch(staticPath, { cache: 'no-store' })
+                .then(function(r2) {
+                    if (!r2.ok) throw new Error('static fallback HTTP ' + r2.status);
+                    return r2.json();
+                });
+        });
+}
 function _listBuildingsFromServer() {
-    return fetch('/buildings/list', { cache: 'no-store' })
-        .then(function(r) { return r.json(); })
+    return _fetchWithStaticFallback('/buildings/list', '/_data/buildings/index.json')
         .then(function(j) { return j.buildings || []; });
 }
 function _loadBuildingFromServer(id) {
-    return fetch('/buildings/load?id=' + encodeURIComponent(id), { cache: 'no-store' })
-        .then(function(r) { return r.json(); });
+    return _fetchWithStaticFallback(
+        '/buildings/load?id=' + encodeURIComponent(id),
+        '/_data/buildings/' + encodeURIComponent(id) + '.json'
+    );
 }
 function _deleteBuildingOnServer(id) {
     return fetch('/buildings/delete', {
@@ -51893,11 +51912,23 @@ _tickCallbacks.push(function(_dt) {
     }
 
     // ── HTTP helpers ─────────────────────────────────────────────
-    function fetchJson(path) {
-        return fetch(path, { cache: 'no-store' }).then(function(r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        });
+    // fetchJson tries the dev-server endpoint first, then falls back to a
+    // static file path (used by the GitHub Pages deploy where the dev
+    // server doesn't exist).
+    function fetchJson(devPath, staticFallback) {
+        return fetch(devPath, { cache: 'no-store' })
+            .then(function(r) {
+                if (r.ok) return r.json();
+                throw new Error('HTTP ' + r.status);
+            })
+            .catch(function(err) {
+                if (!staticFallback) throw err;
+                return fetch(staticFallback, { cache: 'no-store' })
+                    .then(function(r2) {
+                        if (!r2.ok) throw new Error('static fallback HTTP ' + r2.status);
+                        return r2.json();
+                    });
+            });
     }
 
     // ── Main spawn flow ──────────────────────────────────────────
@@ -51909,7 +51940,7 @@ _tickCallbacks.push(function(_dt) {
             return;
         }
 
-        fetchJson('/character_creator/list').then(function(data) {
+        fetchJson('/character_creator/list', '/_data/characters/index.json').then(function(data) {
             var available = {};
             (data.characters || []).forEach(function(c) { available[c.id] = c; });
 
@@ -51922,7 +51953,8 @@ _tickCallbacks.push(function(_dt) {
                     skipped.push(tag.name + ' (no ' + slug + '.json)');
                     return;
                 }
-                var p = fetchJson('/character_creator/load?id=' + encodeURIComponent(slug))
+                var p = fetchJson('/character_creator/load?id=' + encodeURIComponent(slug),
+                                  '/_data/characters/' + encodeURIComponent(slug) + '.json')
                     .then(function(charData) {
                         try {
                             var record = placeNpc(tag, charData.spec);

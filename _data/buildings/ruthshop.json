@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "id": "ruthshop",
+  "name": "RuthShop",
+  "npc_tag": "Ruth",
+  "anchor": {
+    "rotY": 4.1604
+  },
+  "pieces": [
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": -0.523,
+        "y": 0,
+        "z": 4.295
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": 1.62,
+        "y": 0,
+        "z": 3.215
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": -1.603,
+        "y": 0,
+        "z": 2.152
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": 0.54,
+        "y": 0,
+        "z": 1.072
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": -0.54,
+        "y": 0,
+        "z": -1.072
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": -2.683,
+        "y": 0,
+        "z": 0.009
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": 3.763,
+        "y": 0,
+        "z": 2.135
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": 2.683,
+        "y": 0,
+        "z": -0.009
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": 1.603,
+        "y": 0,
+        "z": -2.152
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": -3.763,
+        "y": 0,
+        "z": -2.135
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": -1.62,
+        "y": 0,
+        "z": -3.215
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "found8",
+      "rel_pos": {
+        "x": 0.523,
+        "y": 0,
+        "z": -4.295
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4,
+        "h": 1.2
+      }
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -2.135,
+        "y": 0.9,
+        "z": 3.763
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 1.089,
+        "y": 0.9,
+        "z": 4.826
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -4.295,
+        "y": 0.9,
+        "z": -0.523
+      },
+      "rel_rotY": 3.1416,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -3.232,
+        "y": 0.9,
+        "z": -3.746
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 4.295,
+        "y": 0.9,
+        "z": 0.523
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 1.594,
+        "y": 0.9,
+        "z": -4.835
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -0.017,
+        "y": 0.9,
+        "z": -5.367
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 3.215,
+        "y": 1.8,
+        "z": -1.62
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 90,
+      "vertical": true,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 2.135,
+        "y": 1.8,
+        "z": -3.763
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 90,
+      "vertical": true,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 5.375,
+        "y": 1.8,
+        "z": 2.666
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 90,
+      "vertical": true,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 3.232,
+        "y": 1.8,
+        "z": 3.746
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 90,
+      "vertical": true,
+      "tint": 11561008,
+      "species": "ponderosa"
+    }
+  ],
+  "structures": [
+    {
+      "id": "door_plank",
+      "rel_pos": {
+        "x": 2.669,
+        "y": 0.603,
+        "z": -2.692
+      },
+      "rel_rotY": -3.1414,
+      "doorOpen": false
+    },
+    {
+      "id": "door_plank",
+      "rel_pos": {
+        "x": 4.297,
+        "y": 0.603,
+        "z": 3.208
+      },
+      "rel_rotY": -4.7124,
+      "doorOpen": false
+    }
+  ],
+  "saved_at": "2026-05-03T05:32:33.471Z"
+}

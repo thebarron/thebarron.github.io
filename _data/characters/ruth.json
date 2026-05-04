@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "ruth",
+  "name": "Ruth",
+  "saved_at": "2026-05-03T05:07:28.032Z",
+  "spec": {
+    "skin": 2,
+    "eyeStyle": 4,
+    "eyeColor": 1,
+    "browStyle": 2,
+    "noseStyle": 0,
+    "mouthStyle": 4,
+    "freckles": 0,
+    "hairStyle": "braid_back",
+    "hairColor": 4,
+    "hatStyle": 3,
+    "hatColor": 6,
+    "beardStyle": "none",
+    "height": 0.94,
+    "build": 0,
+    "weight": 0.78,
+    "topStyle": 0,
+    "topColor": 1,
+    "pantsStyle": 1,
+    "pantsColor": 0,
+    "bootStyle": 2
+  }
+}
