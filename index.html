@@ -34942,8 +34942,8 @@ function _rebuildSnapPoints(force) {
             var dRot  = p.rotation.y || 0;
             var dCosR = Math.cos(dRot), dSinR = Math.sin(dRot);
             var dCx   = p.position.x, dCz = p.position.z;
-            var dTopY = p.position.y + 0.025 + LOG_R;
-            var dBotY = p.position.y - 0.025 + LOG_R;
+            var dTopY = p.position.y + 0.025 + LOG_R;   // above deck (horizontal logs sit on top)
+            var dBotY = p.position.y - 0.025;            // at actual deck bottom face (vertical post top touches here)
             var dCorners = [
                 { x: dCx + dCosR*dHw + dSinR*dHw, z: dCz - dSinR*dHw + dCosR*dHw },
                 { x: dCx + dCosR*dHw - dSinR*dHw, z: dCz - dSinR*dHw - dCosR*dHw },
@@ -37318,17 +37318,19 @@ function _updateCarryGhostPosition(nearPiece) {
         } else {
             floorY = getH(gx, gz) + FOUND_H;
         }
-        // Camera pitch drives ghost Y across a wide range — no clamp at the
-        // foundation height. Player can aim at the dirt under a deck overhang
-        // (ghost drops below floorY) or up at a roof peak (ghost rises well
-        // above 6m). camDir.y range is roughly [-0.95, +0.6] depending on the
-        // camera-pitch limits set in player_camera.js.
+        // Camera pitch drives ghost Y. Tuned to MATCH the prior sensitivity
+        // in the normal pitch range (so snap magnetism feels the same), but
+        // with no hard floor/ceiling — ghost drops below foundation when
+        // pitched hard down (under-deck access) and rises above the prior
+        // 6m cap when pitched up (roof peaks).
         //
-        // Map: camDir.y = 0 (level) → ghost at floorY + 1.5m (roughly chest
-        // height — natural neutral); each unit of camDir.y moves the ghost
-        // ±VERTICAL_RANGE m.
-        var VERTICAL_RANGE = 8.0;     // m — pitch drives ghost across ±8m
-        var NEUTRAL_OFFSET = 1.5;     // m — Y at level pitch (chest height)
+        // Reproduces the prior gy at common pitches:
+        //   camDir.y =  0.0 (level)        → gy = floorY + 4.0
+        //   camDir.y = +0.3 (max up)       → gy ≈ floorY + 5.6 (was ~5.7)
+        //   camDir.y = -0.7 (max down)     → gy ≈ floorY + 0.2 (was 0.3)
+        //   camDir.y = -0.95 (steep down)  → gy ≈ floorY - 1.1 (NEW — below floor)
+        var VERTICAL_RANGE = 5.4;     // m — same sensitivity as the prior clamp range
+        var NEUTRAL_OFFSET = 4.0;     // m — ghost height at level pitch (matches prior)
         var gy = floorY + NEUTRAL_OFFSET + camDir.y * VERTICAL_RANGE + _carryGhostHeightOffset;
 
         _carryGhost.position.set(gx, gy, gz);
@@ -37550,6 +37552,12 @@ registerTick('log_carry_snap', function(dt) {
         // Scale the offset by how horizontal the log is (cos of tilt).
         // At tilt 0 (flat): no adjustment. At tilt 90 (vertical): subtract LOG_R.
         var snapY = bestSnap.pos.y - LOG_R * (1.0 - Math.abs(Math.cos(tiltRad)));
+        // Special case: deck_corner_below sits at the actual deck plank
+        // bottom face (no LOG_R offset baked in), so a vertical post tip
+        // touches deck-bottom directly without the LOG_R subtraction.
+        if (bestSnap.type === 'deck_corner_below') {
+            snapY = bestSnap.pos.y;
+        }
 
         if (bestEnd === 'a') {
             // A is at center - offset, so center = snapPos + offset
