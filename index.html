@@ -37309,29 +37309,19 @@ function _updateCarryGhostPosition(nearPiece) {
         var gx = playerPos.x + dirX * placeDist;
         var gz = playerPos.z + dirZ * placeDist;
 
-        // Floor reference: foundation top when present (handles half-buried),
-        // otherwise local terrain + FOUND_H so a stray-ground placement still
-        // floats at log-on-foundation height.
-        var floorY;
-        if (nearPiece && isFoundType(nearPiece.type)) {
-            floorY = nearPiece.position.y + FOUND_H / 2;
-        } else {
-            floorY = getH(gx, gz) + FOUND_H;
-        }
-        // Camera pitch drives ghost Y. Tuned to MATCH the prior sensitivity
-        // in the normal pitch range (so snap magnetism feels the same), but
-        // with no hard floor/ceiling — ghost drops below foundation when
-        // pitched hard down (under-deck access) and rises above the prior
-        // 6m cap when pitched up (roof peaks).
-        //
-        // Reproduces the prior gy at common pitches:
-        //   camDir.y =  0.0 (level)        → gy = floorY + 4.0
-        //   camDir.y = +0.3 (max up)       → gy ≈ floorY + 5.6 (was ~5.7)
-        //   camDir.y = -0.7 (max down)     → gy ≈ floorY + 0.2 (was 0.3)
-        //   camDir.y = -0.95 (steep down)  → gy ≈ floorY - 1.1 (NEW — below floor)
-        var VERTICAL_RANGE = 5.4;     // m — same sensitivity as the prior clamp range
-        var NEUTRAL_OFFSET = 4.0;     // m — ghost height at level pitch (matches prior)
-        var gy = floorY + NEUTRAL_OFFSET + camDir.y * VERTICAL_RANGE + _carryGhostHeightOffset;
+        // Camera pitch drives ghost Y, anchored to the PLAYER (not the
+        // foundation top). Foundation-anchoring broke when the player was
+        // standing on a slope below an overhang — the foundation reference
+        // was meters above the player so the ghost couldn't reach down to
+        // their level. Player-anchoring lets pitch fully control vertical:
+        //   camDir.y ≈  0   (level)       → ghost at eye height in front
+        //   camDir.y ≈ +0.3 (max up)      → ghost ~2m above eye (~3.5m above feet)
+        //   camDir.y ≈ -0.95 (steep down) → ghost ~5m below eye (~3.5m below feet)
+        // Wide enough to reach a deck overhang above AND the dirt below,
+        // from any standing position on a slope.
+        var EYE_Y          = playerPos.y + 1.5;   // approximate eye height
+        var VERTICAL_RANGE = 5.4;                 // m — preserves prior magnetism feel
+        var gy = EYE_Y + camDir.y * VERTICAL_RANGE + _carryGhostHeightOffset;
 
         _carryGhost.position.set(gx, gy, gz);
     }
