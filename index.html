@@ -35092,18 +35092,7 @@ function _createGhost() {
     group.visible = false; // hidden until snapped or positioned
     scene.add(group);
     BUILD.ghost = group;
-    _applyGhostTilt();          // ensure tilt is reflected on creation
     return group;
-}
-
-// Apply current BUILD.tiltIdx to the ghost mesh so the visual orientation
-// matches what _spawnLog will produce on confirm. The mesh inside the ghost
-// group rotates around its local Z axis (geometry was baked rotateZ(π/2)
-// to lay it along X).
-function _applyGhostTilt() {
-    if (!BUILD.ghost || !BUILD.ghost.children[0]) return;
-    var tiltDeg = TILT_ANGLES[BUILD.tiltIdx] || 0;
-    BUILD.ghost.children[0].rotation.z = tiltDeg * Math.PI / 180;
 }
 
 function _removeGhost() {
@@ -35129,30 +35118,6 @@ function _snapGhostTo(snapPoint) {
 
     BUILD.valid = true;
     _setGhostValid(true);
-}
-
-// Place the ghost at a free camera-driven position. Used when no snap is
-// selected — the ghost stays visible and tracks the player's aim instead
-// of hiding. Y is driven by camera pitch so the player can lower a
-// vertical post under a deck or raise it to a roof peak just by aiming.
-var _freeRay = null;
-function _placeGhostFree() {
-    if (!BUILD.ghost || !camera || typeof playerPos === 'undefined') return;
-    if (!_freeRay) _freeRay = new THREE.Raycaster();
-    _freeRay.setFromCamera(new THREE.Vector2(0, 0), camera);
-    var dir = _freeRay.ray.direction;
-
-    var DIST = 4.5;     // m — projection distance from player feet
-    var EYE_Y = 1.5;    // m — approximate eye height above feet for ray origin
-    BUILD.ghost.position.set(
-        playerPos.x + dir.x * DIST,
-        (playerPos.y + EYE_Y) + dir.y * DIST,
-        playerPos.z + dir.z * DIST
-    );
-    BUILD.ghost.rotation.y = BUILD.rotY;
-    BUILD.ghost.visible = true;
-    BUILD.valid = true;
-    _setGhostState(BUILD.ghost, 'free');
 }
 
 // state: 'free' (blue, floating), 'snapped' (green, locked to snap), 'invalid' (red)
@@ -36623,7 +36588,6 @@ window._buildTiltOrPitch = function() {
     if (!BUILD.active) return;
     // building_mobile BUILD categories are all log_N variants — single Tilt action.
     BUILD.tiltIdx = (BUILD.tiltIdx + 1) % TILT_ANGLES.length;
-    _applyGhostTilt();          // reflect tilt on the live ghost mesh
     if (typeof showToast === 'function') showToast('Tilt: ' + TILT_ANGLES[BUILD.tiltIdx] + '°');
 };
 
@@ -36665,14 +36629,7 @@ registerTick('building_mobile_main', function(dt) {
 
     // Update ghost position
     if (BUILD.state === 'placing') {
-        // Logs + structural pieces: snap-point-based placement WITH free
-        // positioning fallback. If a snap is selected by the screen-NDC
-        // crosshair pick, ghost magnetizes to it. Otherwise the ghost
-        // follows the camera ray at a fixed projection distance — Y comes
-        // from the camera's pitch, so looking down lowers the ghost,
-        // looking up raises it. Lets the player float a vertical post
-        // anywhere they aim (under decks, up to roof peaks) without being
-        // gated by which snap points happen to exist.
+        // Logs + structural pieces: snap-point-based placement
         {
             var nearest = _findNearestSnapToCenter();
 
@@ -36681,10 +36638,14 @@ registerTick('building_mobile_main', function(dt) {
                     BUILD.activeSnap = nearest;
                     _snapGhostTo(nearest);
                 }
+                // Highlight the active snap sphere
                 _highlightActiveSnap(nearest);
             } else {
                 BUILD.activeSnap = null;
-                _placeGhostFree();
+                if (BUILD.ghost) {
+                    BUILD.ghost.visible = false;
+                    BUILD.valid = false;
+                }
             }
         }
 
@@ -37357,11 +37318,18 @@ function _updateCarryGhostPosition(nearPiece) {
         } else {
             floorY = getH(gx, gz) + FOUND_H;
         }
-        var minH = floorY + LOG_R;
-        var maxH = floorY + 6.0 - LOG_R;
-        var heightT = (camDir.y + 0.7) / 1.0;
-        heightT = Math.max(0, Math.min(1, heightT));
-        var gy = minH + (maxH - minH) * heightT + _carryGhostHeightOffset;
+        // Camera pitch drives ghost Y across a wide range — no clamp at the
+        // foundation height. Player can aim at the dirt under a deck overhang
+        // (ghost drops below floorY) or up at a roof peak (ghost rises well
+        // above 6m). camDir.y range is roughly [-0.95, +0.6] depending on the
+        // camera-pitch limits set in player_camera.js.
+        //
+        // Map: camDir.y = 0 (level) → ghost at floorY + 1.5m (roughly chest
+        // height — natural neutral); each unit of camDir.y moves the ghost
+        // ±VERTICAL_RANGE m.
+        var VERTICAL_RANGE = 8.0;     // m — pitch drives ghost across ±8m
+        var NEUTRAL_OFFSET = 1.5;     // m — Y at level pitch (chest height)
+        var gy = floorY + NEUTRAL_OFFSET + camDir.y * VERTICAL_RANGE + _carryGhostHeightOffset;
 
         _carryGhost.position.set(gx, gy, gz);
     }
