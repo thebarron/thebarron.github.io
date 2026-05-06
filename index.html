@@ -12577,7 +12577,10 @@ var _dandelionIMesh = null, _dandelionData = [], _dandelionDummy = new THREE.Obj
     scene.add(_dandelionIMesh);
 })();
 
-_scatterSpots(window._wildPlantTuning.dandelion, 7.0).forEach(function(spot) {
+// Seed 11.0 — was 7.0 which collided with elderberry, causing every elderberry
+// to spawn a dandelion stacked at its exact (x, z) position (the first N
+// _scatterSpots indices are identical for the same seed).
+_scatterSpots(window._wildPlantTuning.dandelion, 11.0).forEach(function(spot) {
     var dx = spot[0], dz = spot[1];
     var dh = getH(dx, dz);
     if (dh < -1 || dh > 45) return;
@@ -35089,7 +35092,18 @@ function _createGhost() {
     group.visible = false; // hidden until snapped or positioned
     scene.add(group);
     BUILD.ghost = group;
+    _applyGhostTilt();          // ensure tilt is reflected on creation
     return group;
+}
+
+// Apply current BUILD.tiltIdx to the ghost mesh so the visual orientation
+// matches what _spawnLog will produce on confirm. The mesh inside the ghost
+// group rotates around its local Z axis (geometry was baked rotateZ(π/2)
+// to lay it along X).
+function _applyGhostTilt() {
+    if (!BUILD.ghost || !BUILD.ghost.children[0]) return;
+    var tiltDeg = TILT_ANGLES[BUILD.tiltIdx] || 0;
+    BUILD.ghost.children[0].rotation.z = tiltDeg * Math.PI / 180;
 }
 
 function _removeGhost() {
@@ -35115,6 +35129,30 @@ function _snapGhostTo(snapPoint) {
 
     BUILD.valid = true;
     _setGhostValid(true);
+}
+
+// Place the ghost at a free camera-driven position. Used when no snap is
+// selected — the ghost stays visible and tracks the player's aim instead
+// of hiding. Y is driven by camera pitch so the player can lower a
+// vertical post under a deck or raise it to a roof peak just by aiming.
+var _freeRay = null;
+function _placeGhostFree() {
+    if (!BUILD.ghost || !camera || typeof playerPos === 'undefined') return;
+    if (!_freeRay) _freeRay = new THREE.Raycaster();
+    _freeRay.setFromCamera(new THREE.Vector2(0, 0), camera);
+    var dir = _freeRay.ray.direction;
+
+    var DIST = 4.5;     // m — projection distance from player feet
+    var EYE_Y = 1.5;    // m — approximate eye height above feet for ray origin
+    BUILD.ghost.position.set(
+        playerPos.x + dir.x * DIST,
+        (playerPos.y + EYE_Y) + dir.y * DIST,
+        playerPos.z + dir.z * DIST
+    );
+    BUILD.ghost.rotation.y = BUILD.rotY;
+    BUILD.ghost.visible = true;
+    BUILD.valid = true;
+    _setGhostState(BUILD.ghost, 'free');
 }
 
 // state: 'free' (blue, floating), 'snapped' (green, locked to snap), 'invalid' (red)
@@ -36585,6 +36623,7 @@ window._buildTiltOrPitch = function() {
     if (!BUILD.active) return;
     // building_mobile BUILD categories are all log_N variants — single Tilt action.
     BUILD.tiltIdx = (BUILD.tiltIdx + 1) % TILT_ANGLES.length;
+    _applyGhostTilt();          // reflect tilt on the live ghost mesh
     if (typeof showToast === 'function') showToast('Tilt: ' + TILT_ANGLES[BUILD.tiltIdx] + '°');
 };
 
@@ -36626,7 +36665,14 @@ registerTick('building_mobile_main', function(dt) {
 
     // Update ghost position
     if (BUILD.state === 'placing') {
-        // Logs + structural pieces: snap-point-based placement
+        // Logs + structural pieces: snap-point-based placement WITH free
+        // positioning fallback. If a snap is selected by the screen-NDC
+        // crosshair pick, ghost magnetizes to it. Otherwise the ghost
+        // follows the camera ray at a fixed projection distance — Y comes
+        // from the camera's pitch, so looking down lowers the ghost,
+        // looking up raises it. Lets the player float a vertical post
+        // anywhere they aim (under decks, up to roof peaks) without being
+        // gated by which snap points happen to exist.
         {
             var nearest = _findNearestSnapToCenter();
 
@@ -36635,14 +36681,10 @@ registerTick('building_mobile_main', function(dt) {
                     BUILD.activeSnap = nearest;
                     _snapGhostTo(nearest);
                 }
-                // Highlight the active snap sphere
                 _highlightActiveSnap(nearest);
             } else {
                 BUILD.activeSnap = null;
-                if (BUILD.ghost) {
-                    BUILD.ghost.visible = false;
-                    BUILD.valid = false;
-                }
+                _placeGhostFree();
             }
         }
 
