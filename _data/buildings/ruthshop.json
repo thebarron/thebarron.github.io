@@ -342,15 +342,707 @@
       "vertical": true,
       "tint": 11561008,
       "species": "ponderosa"
+    },
+    {
+      "type": "plank_deck",
+      "rel_pos": {
+        "x": 3.746,
+        "y": 0.625,
+        "z": -3.232
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4
+      }
+    },
+    {
+      "type": "plank_stairs",
+      "rel_pos": {
+        "x": 5.889,
+        "y": -0.55,
+        "z": -4.312
+      },
+      "rel_rotY": -3.1416,
+      "dimensions": {
+        "w": 2.4,
+        "run": 1.2,
+        "rise": 1.2
+      }
+    },
+    {
+      "type": "plank_stairs",
+      "rel_pos": {
+        "x": 6.961,
+        "y": -1.75,
+        "z": -4.852
+      },
+      "rel_rotY": -3.1416,
+      "dimensions": {
+        "w": 2.4,
+        "run": 1.2,
+        "rise": 1.2
+      }
+    },
+    {
+      "type": "plank_stairs",
+      "rel_pos": {
+        "x": 8.033,
+        "y": -2.95,
+        "z": -5.392
+      },
+      "rel_rotY": -3.1416,
+      "dimensions": {
+        "w": 2.4,
+        "run": 1.2,
+        "rise": 1.2
+      }
+    },
+    {
+      "type": "plank_deck",
+      "rel_pos": {
+        "x": 4.826,
+        "y": 0.625,
+        "z": -1.089
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4
+      }
+    },
+    {
+      "type": "plank_deck",
+      "rel_pos": {
+        "x": 2.666,
+        "y": 0.625,
+        "z": -5.375
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4
+      }
+    },
+    {
+      "type": "plank_stairs",
+      "rel_pos": {
+        "x": 4.843,
+        "y": -0.6,
+        "z": 4.278
+      },
+      "rel_rotY": -4.7124,
+      "dimensions": {
+        "w": 2.4,
+        "run": 1.2,
+        "rise": 1.2
+      }
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -1.089,
+        "y": 1.5,
+        "z": -4.826
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -4.295,
+        "y": 1.5,
+        "z": -0.523
+      },
+      "rel_rotY": 3.1416,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 0.017,
+        "y": 1.5,
+        "z": 5.366
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 4.835,
+        "y": 1.5,
+        "z": 1.595
+      },
+      "rel_rotY": 3.1416,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -1.089,
+        "y": 2.1,
+        "z": -4.826
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -2.134,
+        "y": 1.5,
+        "z": 3.763
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -2.134,
+        "y": 2.1,
+        "z": 3.763
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -4.295,
+        "y": 2.1,
+        "z": -0.524
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 4.835,
+        "y": 2.1,
+        "z": 1.595
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 0.017,
+        "y": 2.1,
+        "z": 5.366
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -1.089,
+        "y": 2.7,
+        "z": -4.826
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -4.303,
+        "y": 2.7,
+        "z": -3.207
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 1.089,
+        "y": 2.7,
+        "z": 4.826
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 4.304,
+        "y": 2.7,
+        "z": 3.206
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "length": 2.4,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 2.134,
+        "y": 2.7,
+        "z": -3.763
+      },
+      "rel_rotY": 3.1416,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 4.294,
+        "y": 2.7,
+        "z": 0.523
+      },
+      "rel_rotY": 3.1416,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -2.134,
+        "y": 2.7,
+        "z": 3.763
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": -4.295,
+        "y": 2.7,
+        "z": -0.524
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 0,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -1.089,
+        "y": 3,
+        "z": -4.826
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 1.054,
+        "y": 3,
+        "z": -5.907
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -3.232,
+        "y": 3,
+        "z": -3.746
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -5.375,
+        "y": 3,
+        "z": -2.667
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 1.989,
+        "y": 4.2,
+        "z": -4.051
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -0.154,
+        "y": 4.2,
+        "z": -2.97
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -2.297,
+        "y": 4.2,
+        "z": -1.89
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -4.439,
+        "y": 4.2,
+        "z": -0.811
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -1.054,
+        "y": 3,
+        "z": 5.906
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 1.089,
+        "y": 3,
+        "z": 4.826
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 3.232,
+        "y": 3,
+        "z": 3.746
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 5.374,
+        "y": 3,
+        "z": 2.666
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 4.439,
+        "y": 4.2,
+        "z": 0.81
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -1.99,
+        "y": 4.2,
+        "z": 4.05
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 0.154,
+        "y": 4.2,
+        "z": 2.97
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 2.296,
+        "y": 4.2,
+        "z": 1.89
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -2.457,
+        "y": 4.8,
+        "z": 3.122
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -0.314,
+        "y": 4.8,
+        "z": 2.042
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 1.829,
+        "y": 4.8,
+        "z": 0.962
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 3.971,
+        "y": 4.8,
+        "z": -0.118
+      },
+      "rel_rotY": 1.5708,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 2.457,
+        "y": 4.8,
+        "z": -3.122
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": 0.314,
+        "y": 4.8,
+        "z": -2.042
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -1.829,
+        "y": 4.8,
+        "z": -0.962
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
+    },
+    {
+      "type": "roof_panel",
+      "rel_pos": {
+        "x": -3.972,
+        "y": 4.8,
+        "z": 0.117
+      },
+      "rel_rotY": 4.7124,
+      "dimensions": {
+        "w": 2.4
+      },
+      "roofAngle": 30
     }
   ],
   "structures": [
     {
       "id": "door_plank",
       "rel_pos": {
-        "x": 2.669,
-        "y": 0.603,
-        "z": -2.692
+        "x": 2.667,
+        "y": 0.601,
+        "z": -2.691
       },
       "rel_rotY": -3.1414,
       "doorOpen": false
@@ -358,13 +1050,13 @@
     {
       "id": "door_plank",
       "rel_pos": {
-        "x": 4.297,
-        "y": 0.603,
-        "z": 3.208
+        "x": 4.295,
+        "y": 0.601,
+        "z": 3.209
       },
       "rel_rotY": -4.7124,
-      "doorOpen": false
+      "doorOpen": true
     }
   ],
-  "saved_at": "2026-05-03T05:32:33.471Z"
+  "saved_at": "2026-05-06T03:30:22.227Z"
 }
