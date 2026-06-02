@@ -1169,6 +1169,100 @@
         "run": 1.2,
         "rise": 1.2
       }
+    },
+    {
+      "type": "plank_deck",
+      "rel_pos": {
+        "x": 4.809,
+        "y": 0.625,
+        "z": -6.455
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4
+      }
+    },
+    {
+      "type": "plank_deck",
+      "rel_pos": {
+        "x": 5.889,
+        "y": 0.625,
+        "z": -4.312
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4
+      }
+    },
+    {
+      "type": "plank_deck",
+      "rel_pos": {
+        "x": 6.969,
+        "y": 0.625,
+        "z": -2.169
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4
+      }
+    },
+    {
+      "type": "plank_deck",
+      "rel_pos": {
+        "x": 8.049,
+        "y": 0.625,
+        "z": -0.026
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4
+      }
+    },
+    {
+      "type": "plank_deck",
+      "rel_pos": {
+        "x": 9.129,
+        "y": 0.625,
+        "z": 2.117
+      },
+      "rel_rotY": 0,
+      "dimensions": {
+        "w": 2.4
+      }
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 5.341,
+        "y": -1.8,
+        "z": -8.067
+      },
+      "rel_rotY": -3.375,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 90,
+      "vertical": true,
+      "tint": 11561008,
+      "species": "ponderosa"
+    },
+    {
+      "type": "log",
+      "rel_pos": {
+        "x": 10.741,
+        "y": -1.8,
+        "z": 2.648
+      },
+      "rel_rotY": -3.375,
+      "dimensions": {
+        "length": 4.8,
+        "radius": 0.3
+      },
+      "tiltAngle": 90,
+      "vertical": true,
+      "tint": 11561008,
+      "species": "ponderosa"
     }
   ],
   "structures": [
@@ -1193,5 +1287,5 @@
       "doorOpen": false
     }
   ],
-  "saved_at": "2026-05-06T04:32:25.465Z"
+  "saved_at": "2026-05-06T05:39:19.583Z"
 }
