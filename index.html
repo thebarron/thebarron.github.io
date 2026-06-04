@@ -12290,6 +12290,14 @@ function _registerRockCollisions() {
                         o._instMesh.setMatrixAt(o._instIdx, _rockHideMatrix);
                         o._instMesh.instanceMatrix.needsUpdate = true;
                     }
+                    // The LOD culler (_core/lod_culler.js) repacks every rock
+                    // instance from its cached _mat every ~15 frames — without this
+                    // flag it would redraw the mined-out rock a few frames later
+                    // (the "model comes back but I can clip through it" bug). Flag
+                    // the allRocks entry dead so the culler skips it, then force an
+                    // immediate repack so it vanishes now, not on the next pass.
+                    if (o._rockEntry) o._rockEntry.dead = true;
+                    if (window._lodCuller && _lodCuller.forceCull) _lodCuller.forceCull();
                     if (o._rcEntry) {
                         if (typeof _rockGrid !== 'undefined' && _rockGrid.remove) _rockGrid.remove(o._rcEntry);
                         var _ci = _rockCollisionMeshes.indexOf(o._rcEntry);
@@ -12322,6 +12330,7 @@ function _registerRockCollisions() {
         obj._instMesh = srcMesh;
         obj._instIdx  = r.instanceIdx;
         obj._rcEntry  = rcEntry;
+        obj._rockEntry = r;  // allRocks entry — flagged dead on mine-out so the LOD culler skips it
     }
 
     console.log('[rocks] Created ' + _rockCollisionMeshes.length + ' collision meshes (grid cells: ' + Object.keys(_rockGrid.cells).length + ')');
@@ -14024,6 +14033,9 @@ function _cullRocks() {
 
     for (var i = 0; i < len; i++) {
         var rock = allRocks[i];
+        // Mined-out rocks stay in allRocks but must never be repacked back in —
+        // the destroy handler in rocks.js flags them. Skip so they stay gone.
+        if (rock.dead) { rock._cullIdx = -1; continue; }
         var dx = rock.x - camX;
         var dz = rock.z - camZ;
         var distSq = dx * dx + dz * dz;
@@ -34884,6 +34896,7 @@ const RECIPES = [
         ingredients: [{ type: 'firewood', count: 6 }, { type: 'plant_fiber', count: 4 }],
         output: { type: 'drying_rack_item', count: 1 },
         placeId: 'drying_rack',
+        workbenchCraft: true,   // gated behind the workbench crafting station
     },
     // ---- SMOKING RACK (index 18) — passive food preservation, no salt required ----
     {
@@ -35475,31 +35488,41 @@ function buildIronWorkbenchUpgrade() {
     if (_isTouchDevice) return;  // mobile owns its own button family
 
     // ── (B) badge on existing backpack button ───────────────────────────
-    function _addBackpackBadge() {
-        var bp = document.getElementById('backpackBtn');
-        if (!bp) return false;
-        if (bp.querySelector('.pc-keybind-badge')) return true;
+    // Adds the badge only if it's missing. Idempotent so the MutationObserver
+    // below can call it freely without stacking duplicate badges.
+    function _ensureBackpackBadge(bp) {
+        if (!bp) return;
+        if (bp.querySelector('.pc-keybind-badge')) return;
         var badge = document.createElement('span');
         badge.className = 'pc-keybind-badge';
         badge.textContent = 'B';
         bp.appendChild(badge);
-        return true;
     }
-    // inventory.js's backpackBtn might not exist when this module first
-    // runs (module order isn't guaranteed). Retry until it does.
-    function _tryBackpack(tries) {
-        if (_addBackpackBadge()) return;
+    // inventory.js's backpackBtn might not exist when this module first runs
+    // (module order isn't guaranteed). Retry until it does, then WATCH it:
+    // character.js's _renderBackpackIcon() does `btn.innerHTML = ''` + appends
+    // a rendered PNG once the backpack model loads (async, after we run) — that
+    // wipes the badge. The observer re-asserts it whenever the button's
+    // children change. Re-adding triggers another mutation, but _ensureBackpackBadge
+    // is a no-op once the badge is present, so it settles without looping.
+    function _watchBackpack(tries) {
+        var bp = document.getElementById('backpackBtn');
+        if (bp) {
+            _ensureBackpackBadge(bp);
+            new MutationObserver(function() { _ensureBackpackBadge(bp); })
+                .observe(bp, { childList: true });
+            return;
+        }
         if (tries > 40) return;  // ~4s ceiling — give up quietly
-        setTimeout(function() { _tryBackpack(tries + 1); }, 100);
+        setTimeout(function() { _watchBackpack(tries + 1); }, 100);
     }
-    _tryBackpack(0);
+    _watchBackpack(0);
 
-    // ── B keybind: same effect as clicking the backpack button ──────────
-    if (typeof registerKeybind === 'function') {
-        registerKeybind('onFoot', 'b', function() {
-            if (typeof toggleInventory === 'function') toggleInventory();
-        });
-    }
+    // NOTE: the B→toggleInventory keybind lives in inventory.js (it has the
+    // aim/rifle/fishing-mode guards and works on all platforms). This module
+    // is PURELY VISUAL — badge + craft button. Do NOT register a B keybind
+    // here; doing so double-fires toggleInventory and the bag opens then
+    // instantly closes. (Removed 2026-06-04.)
 
     // ── Build #pcCraftBtn ───────────────────────────────────────────────
     // Hammer + chisel SVG drawn in the same line-weight family as the
@@ -38811,15 +38834,10 @@ function _highlightActiveSnap(activeSnapPoint) {
 // Desktop keyboard input
 document.addEventListener('keydown', function(e) {
     if (!BUILD.active) {
-        // B to enter build mode (dev: quick-start with 8ft log)
-        if (e.key === 'b' || e.key === 'B') {
-            // Check hammer equipped
-            var equipped = typeof getEquippedTool === 'function' ? getEquippedTool() : null;
-            if (devInfMaterials || (equipped && equipped.category === 'buildingHammer')) {
-                enterBuildMode('log_8');
-                e.preventDefault();
-            }
-        }
+        // B is the backpack key (inventory.js) — building no longer uses it.
+        // Legacy "B = quick-start an 8ft log" dev shortcut removed 2026-06-04;
+        // build entry is now hold-to-build + the dev number keys (1–4) below.
+        // Do NOT re-add a B handler here.
         return;
     }
 
@@ -38827,8 +38845,8 @@ document.addEventListener('keydown', function(e) {
     // context_buttons.js dispatchers. Only mode entry/exit + placement + dev
     // shortcuts stay here.
     switch (e.key) {
-        case 'b': case 'B':
         case 'Escape':
+            // B used to exit build mode too — removed so B is backpack-only.
             exitBuildMode();
             e.preventDefault();
             break;
@@ -39479,15 +39497,21 @@ function _updateCarryGhostPosition(nearPiece) {
         // foundation top). Foundation-anchoring broke when the player was
         // standing on a slope below an overhang — the foundation reference
         // was meters above the player so the ghost couldn't reach down to
-        // their level. Player-anchoring lets pitch fully control vertical:
-        //   camDir.y ≈  0   (level)       → ghost at eye height in front
-        //   camDir.y ≈ +0.3 (max up)      → ghost ~2m above eye (~3.5m above feet)
-        //   camDir.y ≈ -0.95 (steep down) → ghost ~5m below eye (~3.5m below feet)
-        // Wide enough to reach a deck overhang above AND the dirt below,
-        // from any standing position on a slope.
-        var EYE_Y          = playerPos.y + 1.5;   // approximate eye height
-        var VERTICAL_RANGE = 5.4;                 // m — preserves prior magnetism feel
-        var gy = EYE_Y + camDir.y * VERTICAL_RANGE + _carryGhostHeightOffset;
+        // their level. Player-anchoring lets pitch fully control vertical.
+        //
+        // RE-CENTERED 2026-06-04: the height is now expressed as "base height
+        // at the resting camera angle, plus how far the camera has tilted off
+        // that base." This cleanly separates BASE position from REACTIVITY:
+        //   - At the resting ~40° camera (camDir.y ≈ BASE_LOOK_Y), the tilt
+        //     term is zero, so the ghost floats at HEAD_Y (character's head).
+        //   - Tilt camera steeper (more top-down) → camDir.y more negative →
+        //     ghost drops toward the ground. Tilt shallower → ghost rises.
+        // Because the base is pinned to HEAD_Y, changing VERTICAL_RANGE later
+        // (the reactivity tuning) will NOT move the base position.
+        var HEAD_Y         = playerPos.y + 1.7;   // base height = head height (tune to taste)
+        var BASE_LOOK_Y    = -0.63;               // camDir.y at the resting ~40° camera (measured)
+        var VERTICAL_RANGE = 5.4;                 // m — reactivity: how hard ghost swings with pitch (tuned separately, next)
+        var gy = HEAD_Y + (camDir.y - BASE_LOOK_Y) * VERTICAL_RANGE + _carryGhostHeightOffset;
 
         _carryGhost.position.set(gx, gy, gz);
     }
@@ -41574,9 +41598,13 @@ function _buildFirePitModel(ghost) {
     // Per-color vertex tints baked into the merged geometry.
     var ROCK_COLOR     = 0x808080;
     var COOK_COLOR     = 0x707070;
-    var WOOD_COLOR     = 0x6e5535;
 
-    // 8-rock ring + 3 cook rocks + 4 firewood pile = 15 specs → 1 merged mesh.
+    // 8-rock ring + 3 cook rocks = 11 specs → 1 merged mesh.
+    // NO baked-in firewood: the logs you see are ALL the dynamic logGroup,
+    // driven by pitState.logCount (4 on placement, 0 when burned out). Baked
+    // firewood used to live here too, but it never changed — so a burned-out
+    // pit still looked full. Removed 2026-06-04 so logCount is the single
+    // source of truth for the log visual.
     // Per-spec matrix carries position + rotation; per-spec color baked as
     // vertex colors during merge. Dynamic flames/light/added-logs live on
     // pitState.flames / pitState.fireLight / pitState.logGroup attached
@@ -41610,21 +41638,8 @@ function _buildFirePitModel(ghost) {
         });
     }
 
-    // Firewood pile in center (4 small logs, rotated 90° so they lay flat)
-    for (var i = 0; i < 4; i++) {
-        _euler.set(0, (i / 4) * Math.PI + Math.random() * 0.3, Math.PI / 2);
-        var fwRot = new THREE.Matrix4().makeRotationFromEuler(_euler);
-        var fwTr = new THREE.Matrix4().makeTranslation(
-            (Math.random() - 0.5) * 0.15,
-            0.08 + i * 0.03,
-            (Math.random() - 0.5) * 0.15
-        );
-        specs.push({
-            geo: new THREE.CylinderGeometry(0.03, 0.04, 0.3, 5),
-            matrix: fwTr.multiply(fwRot),
-            color: WOOD_COLOR,
-        });
-    }
+    // (Firewood pile removed — logs are now drawn entirely by the dynamic
+    // logGroup from pitState.logCount. See _rebuildLogMeshes below.)
 
     // Ghost: use the existing translucent green ghost material directly (vertex
     // colors in the merged geo are simply ignored by the non-vertex-color
@@ -43195,6 +43210,62 @@ var FIRE_PIT_MAX_LOGS = 12;
 var FIRE_BURN_PER_LOG = 0.42;  // game-hours per log (~5 min real time at 30x)
 var FIRE_COALS_DURATION = 20 * 60;  // 20 real minutes in seconds
 
+// ── Fire-pit light pool (WebGPU recompile fix) ──
+// Adding a PointLight to the scene at RUNTIME changes the scene's light count,
+// which forces every light-using NodeMaterial to recompile its shader — a
+// multi-second hitch that used to fire on EVERY fire pit placement. The rest
+// of the game already dodges this by pre-allocating lights at load (campfire.js,
+// workbench.js cabin window, solar.js); the fire pit was the lone offender.
+//
+// Fix: pre-allocate a small pool at startup (so the count is fixed before
+// game_loop's shader pre-warm), then lend a light to a pit only WHILE IT'S LIT
+// (burning/coals). Cold pits hold no light, so a handful of shared lights
+// covers real play no matter how many pits exist, and the light count never
+// changes again. Brightening a pooled light (intensity uniform) never recompiles
+// — only adding/removing a light does.
+var FIRE_LIGHT_POOL_SIZE = 4;   // max simultaneously-LIT fires that cast light (realistic max is 1–2)
+var _fireLightPool = [];
+function _initFireLightPool() {
+    if (typeof scene === 'undefined' || _fireLightPool.length) return;
+    for (var i = 0; i < FIRE_LIGHT_POOL_SIZE; i++) {
+        var L = new THREE.PointLight(0xff6622, 0, 8);
+        L._fpFree = true;
+        scene.add(L);
+        _fireLightPool.push(L);
+    }
+}
+_initFireLightPool();  // at module load — scene_setup loads first, so scene exists
+
+// Lend a pooled light to a pit (positions + resets it). Returns null if the
+// pool is exhausted — the fire still shows its flame/ember meshes, it just
+// won't cast dynamic light. Either way: no scene light-count change, no recompile.
+function _acquireFireLight(pos) {
+    if (!_fireLightPool.length) _initFireLightPool();  // belt-and-suspenders (rare)
+    for (var i = 0; i < _fireLightPool.length; i++) {
+        var L = _fireLightPool[i];
+        if (L._fpFree) {
+            L._fpFree = false;
+            L.position.set(pos.x, pos.y + 0.8 * 1.5, pos.z);  // 1.5 = PIT_SCALE
+            L.color.setHex(0xff6622);
+            L.intensity = 0;
+            L.distance = 8;
+            return L;
+        }
+    }
+    return null;
+}
+function _releaseFireLight(L) {
+    if (!L) return;
+    L.intensity = 0;
+    L._fpFree = true;
+}
+// Acquire a light on demand for a lit pit that doesn't hold one yet (covers
+// save-restore straight into a burning state, before _updateFireVisuals runs).
+function _ensureFireLight(pitState) {
+    if (!pitState.fireLight) pitState.fireLight = _acquireFireLight(pitState.pos);
+    return pitState.fireLight;
+}
+
 function _setupFirePitInteraction(obj, model, pos) {
     var pitState = {
         state: 'fresh',       // 'fresh', 'burning', 'coals', 'ash'
@@ -43208,11 +43279,12 @@ function _setupFirePitInteraction(obj, model, pos) {
     // Fire pit scale factor (model is 1.5x, effects must match)
     var PIT_SCALE = 1.5;
 
-    // Fire light (off by default)
-    var fireLight = new THREE.PointLight(0xff6622, 0, 8);
-    fireLight.position.set(pos.x, pos.y + 0.8 * PIT_SCALE, pos.z);
-    scene.add(fireLight);
-    pitState.fireLight = fireLight;
+    // Fire light: lent from the pre-allocated pool only while the pit is lit
+    // (see _acquireFireLight / _updateFireVisuals). pitState.fireLight stays
+    // null while cold — no per-pit light, no scene light-count change, no
+    // shader recompile on placement. Store pos so the pool light can be
+    // positioned when this pit ignites.
+    pitState.pos = { x: pos.x, y: pos.y, z: pos.z };
 
     // Flame group (hidden until lit) — scaled to match pit
     // Larger base cones so a full fire looks substantial
@@ -43510,8 +43582,11 @@ function _setupFirePitInteraction(obj, model, pos) {
             var fuelRatio = Math.min(pitState.logCount / 6, 1.0);
             var baseScale = 0.25 + fuelRatio * 1.5;  // 0.25 (1 log) → 1.75 (full)
             var flicker = 0.85 + Math.sin(Date.now() * 0.008) * 0.15;
-            pitState.fireLight.intensity = (0.8 + fuelRatio * 3.0) * flicker;
-            pitState.fireLight.distance = 5 + fuelRatio * 8;
+            _ensureFireLight(pitState);
+            if (pitState.fireLight) {
+                pitState.fireLight.intensity = (0.8 + fuelRatio * 3.0) * flicker;
+                pitState.fireLight.distance = 5 + fuelRatio * 8;
+            }
 
             var fc = pitState.flames.children;
             for (var i = 0; i < fc.length; i++) {
@@ -43546,9 +43621,12 @@ function _setupFirePitInteraction(obj, model, pos) {
             // Pulsing ember glow — fades as coals die
             var lifeRatio = Math.max(0, pitState.coalsTimer / FIRE_COALS_DURATION);
             var pulse = (0.2 + Math.sin(Date.now() * 0.002) * 0.15) * lifeRatio;
-            pitState.fireLight.intensity = pulse + lifeRatio * 0.3;
-            pitState.fireLight.distance = 2 + lifeRatio * 3;
-            pitState.fireLight.color.setHex(lifeRatio > 0.3 ? 0xff4400 : 0x882200);
+            _ensureFireLight(pitState);
+            if (pitState.fireLight) {
+                pitState.fireLight.intensity = pulse + lifeRatio * 0.3;
+                pitState.fireLight.distance = 2 + lifeRatio * 3;
+                pitState.fireLight.color.setHex(lifeRatio > 0.3 ? 0xff4400 : 0x882200);
+            }
 
             pitState.emberMat.opacity = 0.4 + lifeRatio * 0.4;
             pitState.emberMat.color.setHex(lifeRatio > 0.5 ? 0x8a3010 : lifeRatio > 0.2 ? 0x5a2008 : 0x3a1505);
@@ -43578,29 +43656,36 @@ function _setupFirePitInteraction(obj, model, pos) {
 }
 
 function _updateFireVisuals(pitState) {
+    // Lend a pool light while lit; return it the moment the pit goes cold.
+    var lit = (pitState.state === 'burning' || pitState.state === 'coals');
+    if (lit) _ensureFireLight(pitState);
+    else if (pitState.fireLight) { _releaseFireLight(pitState.fireLight); pitState.fireLight = null; }
+
     if (pitState.state === 'burning') {
         pitState.flames.visible = true;
-        pitState.fireLight.intensity = 1.5;
-        pitState.fireLight.color.setHex(0xff6622);
+        if (pitState.fireLight) {
+            pitState.fireLight.intensity = 1.5;
+            pitState.fireLight.color.setHex(0xff6622);
+        }
         pitState.emberMat.opacity = 0;
         pitState.ashMat.opacity = 0;
     } else if (pitState.state === 'coals') {
         pitState.flames.visible = false;
-        pitState.fireLight.intensity = 0.4;
-        pitState.fireLight.color.setHex(0xff4400);
-        pitState.fireLight.distance = 4;
+        if (pitState.fireLight) {
+            pitState.fireLight.intensity = 0.4;
+            pitState.fireLight.color.setHex(0xff4400);
+            pitState.fireLight.distance = 4;
+        }
         pitState.emberMat.opacity = 0.7;
         pitState.emberMat.color.setHex(0x8a3010);
         pitState.ashMat.opacity = 0;
     } else if (pitState.state === 'ash') {
         pitState.flames.visible = false;
-        pitState.fireLight.intensity = 0;
         pitState.emberMat.opacity = 0;
         pitState.ashMat.opacity = 0.6;  // gray ash pile visible
     } else {
         // fresh
         pitState.flames.visible = false;
-        pitState.fireLight.intensity = 0;
         pitState.emberMat.opacity = 0;
         pitState.ashMat.opacity = 0;
     }
@@ -59785,6 +59870,10 @@ registerTick('post_effects_grain', function(_dt) {
     _mkDevBtn('+ Watering Can', '106,168,216', function() { _giveItem('watering_can', 1); });
     _mkDevBtn('+ Water Jug (fill at creek)', '106,168,216', function() { _giveItem('water_jug', 1); });
     _mkDevBtn('+ Water Bottle', '106,168,216', function() { _giveItem('water_bottle', 1); });
+
+    // Structures — spawn the placeable item into the pack, then place it.
+    // Drying rack is workbench-gated in the real recipe; this skips that for testing.
+    _mkDevBtn('+ Drying Rack', '198,150,96', function() { _giveItem('drying_rack_item', 1); });
 
     var _devSeeds = ['radish_seed','lettuce_seed','carrot_seed','tomato_seed','kale_seed','bush_bean_seed'];
     _mkDevBtn('+ Seed Sampler (5 each)', '140,200,120', function() {
