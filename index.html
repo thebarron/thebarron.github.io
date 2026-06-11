@@ -3123,16 +3123,22 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
   opacity: 0.5;
 }
 #shopPanel .shop-row .sr-icon {
-  width: 36px; height: 36px;
+  width: 48px; height: 48px;
   flex: 0 0 auto;
   background: rgba(60, 50, 38, 0.45);
   border-radius: 4px;
   display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
   font-family: var(--sov-font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--sov-sage-200, #c8d4b0);
   letter-spacing: 0.5px;
+}
+#shopPanel .shop-row .sr-icon img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 #shopPanel .shop-row .sr-meta {
   flex: 1;
@@ -3210,6 +3216,143 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
   min-height: 40px;
 }
 #shopPanel .shop-back:hover { background: rgba(56, 44, 32, 0.70); }
+
+/* ── journal ── */
+/* Discovery toasts — the journal writing itself. Upper-right stack,
+   clear of the top-left puck cluster and the mobile right-side context
+   buttons (which live vertically centered / lower). Cards persist until
+   tapped (opens the journal) or dismissed. */
+#journalToasts {
+    position: fixed;
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: var(--sov-z-gear, 9010);
+    pointer-events: none;
+    width: min(290px, 78vw);
+}
+.j-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    background: rgba(22, 18, 14, 0.86);
+    border: 1px solid rgba(168, 188, 140, 0.35);
+    border-left: 3px solid var(--sov-sage-500, #7a8c5c);
+    border-radius: var(--sov-radius-sm, 8px);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transform: translateX(16px);
+    opacity: 0;
+    transition: transform 300ms ease, opacity 300ms ease;
+    box-shadow: 0 3px 14px rgba(8, 12, 6, 0.45);
+}
+.j-toast.j-in { transform: translateX(0); opacity: 1; }
+.j-toast__icon {
+    width: 38px; height: 38px;
+    flex: 0 0 38px;
+    border-radius: 6px;
+    background: rgba(168, 196, 140, 0.08);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sov-sage-200, #c8d4b0);
+    overflow: hidden;
+}
+.j-toast__icon img { width: 100%; height: 100%; object-fit: contain; }
+.j-toast__body { flex: 1; min-width: 0; }
+.j-toast__kicker {
+    font-family: var(--sov-font-display);
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--sov-text-dim, #8a9478);
+    margin-bottom: 2px;
+}
+.j-toast__line {
+    font-family: var(--sov-font-display);
+    font-size: 12.5px;
+    line-height: 1.35;
+    font-style: italic;
+    color: var(--sov-sage-200, #c8d4b0);
+}
+.j-toast__x {
+    flex: 0 0 auto;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sov-text-dim, #8a9478);
+    font-size: 13px;
+    border-radius: 6px;
+}
+.j-toast__x:active, .j-toast__x:hover { color: var(--sov-sage-200, #c8d4b0); background: rgba(168,196,140,0.10); }
+@media (max-width: 720px) {
+    #journalToasts { top: calc(46px + env(safe-area-inset-top, 0px)); width: min(250px, 64vw); }
+    .j-toast__line { font-size: 11.5px; }
+}
+
+/* Journal book button (top-left puck cluster, next to ?) */
+#journalBtn {
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: calc(134px + env(safe-area-inset-left, 0px));
+    width: 36px; height: 36px;
+    z-index: var(--sov-z-gear, 9010);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    user-select: none; -webkit-user-select: none;
+}
+#journalBtn svg { width: 17px; height: 17px; }
+#journalBtn .j-badge {
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--sov-amber-300, #d89848);
+    border: 1.5px solid rgba(22, 18, 14, 0.9);
+    display: none;
+}
+#journalBtn.j-has-unread .j-badge { display: block; }
+
+/* Journal entry rows inside the book panel */
+.j-entry {
+    padding: 10px 12px;
+    margin: 5px 0;
+    background: rgba(168, 196, 140, 0.05);
+    border-radius: var(--sov-radius-sm, 8px);
+    border-left: 2px solid var(--sov-sage-500, #7a8c5c);
+}
+.j-entry--unread { background: rgba(216, 164, 76, 0.07); border-left-color: var(--sov-amber-300, #d89848); }
+.j-entry--flash { animation: jEntryFlash 1.6s ease; }
+@keyframes jEntryFlash {
+    0% { background: rgba(216, 164, 76, 0.28); }
+    100% { background: rgba(168, 196, 140, 0.05); }
+}
+.j-entry__head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.j-entry__icon { width: 30px; height: 30px; flex: 0 0 30px; display: flex; align-items: center; justify-content: center; color: var(--sov-sage-200); }
+.j-entry__icon img { width: 100%; height: 100%; object-fit: contain; }
+.j-entry__title {
+    font-family: var(--sov-font-display);
+    font-size: 12px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--sov-sage-200, #c8d4b0);
+}
+.j-entry__text {
+    font-family: var(--sov-font-display);
+    font-size: 13px;
+    line-height: 1.55;
+    font-style: italic;
+    color: var(--sov-sage-200, #c8d4b0);
+    opacity: 0.92;
+}
+.j-empty {
+    font-family: var(--sov-font-display);
+    font-size: 13px; font-style: italic;
+    color: var(--sov-text-dim, #8a9478);
+    text-align: center; padding: 22px 8px; line-height: 1.5;
+}
 </style>
 </head>
 <body>
@@ -3577,6 +3720,9 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
     <button class="shop-back" id="shopLeaveBtn">Leave</button>
   </div>
 </div>
+
+<!-- ── journal ── -->
+<div id="journalToasts"></div>
 
 <script src="/src/_lib/three.webgpu.global.js"></script>
 <script>
@@ -9267,20 +9413,10 @@ function spawnGroundLogAtPosition(lx, lz, species, speciesName, barkColor, lengt
 
     const ftLabel = logLevel >= 2 ? '4ft' : logLevel === 1 ? '8ft' : '16ft';
 
-    // All logs → carry or stack
+    // All logs → carry. Ground stacking disabled 2026-06-10: the "Stack"
+    // option fired before "Pick up" whenever hands held a matching log,
+    // which made it impossible to stack multiple small logs in hand.
     logEntry.onInspect = [
-    {
-        // Stack option — only when carrying a matching log
-        label: 'Stack ' + ftLabel + ' Log',
-        canDo: function() {
-            return typeof isCarrying === 'function' && isCarrying() &&
-                   carryState.carrying && carryState.carrying.type === 'wood_log' &&
-                   (carryState.carrying.logLevel || 0) === logLevel;
-        },
-        action: (obj) => {
-            _stackOntoGroundLog(obj, logMesh, species, speciesName, barkColor, logLen, logLevel);
-        }
-    },
     {
         // Normal pickup
         label: 'Pick up ' + ftLabel + ' ' + speciesName + ' Log',
@@ -10517,10 +10653,12 @@ window._hideBuildZoneRings = function() {
 //
 // Pyramid shape: 4 base → 3 → 2 → 1 = 10 max per stack.
 // All logs same color (first log sets it). Oriented to first log's rotation.
-// Created when player stacks a carried log onto a matching ground log.
+//
+// CREATION DISABLED 2026-06-10 — stacking intercepted the pickup action and
+// blocked multi-log hand carry. Take-from-stack + save/load kept so stacks
+// already in saves can still be emptied (they drain back to ground logs).
 //
 // Stack interaction:
-//   Carrying matching log + near stack → "Add to Stack"
 //   Empty hands + near stack → "Take Log"
 //   Stack at 1 log + take → converts back to ground log
 //
@@ -10528,8 +10666,6 @@ window._hideBuildZoneRings = function() {
 
 var _logStacks = [];
 var _LOG_STACK_ROWS = [4, 3, 2, 1];  // logs per row, bottom to top
-var _LOG_STACK_MAX  = 10;             // 4+3+2+1
-var _STACK_DETECT_R = 1.5;            // how close to be for "Stack" to appear
 
 // ── Build pyramid mesh for a stack ──
 function _buildStackMesh(count, logLevel, barkColor, logLen, species) {
@@ -10587,17 +10723,6 @@ function _createLogStack(x, z, rotY, species, speciesName, barkColor, logLen, lo
 
     obj.onInspect = [
     {
-        // Add to stack — when carrying matching log
-        label: 'Add to Stack (' + ftLabel + ')',
-        canDo: function() {
-            if (obj.stackCount >= _LOG_STACK_MAX) return false;
-            return typeof isCarrying === 'function' && isCarrying() &&
-                   carryState.carrying && carryState.carrying.type === 'wood_log' &&
-                   (carryState.carrying.logLevel || 0) === logLevel;
-        },
-        action: function() { _addToStack(obj); }
-    },
-    {
         // Take log — empty hands
         label: 'Take ' + ftLabel + ' ' + speciesName + ' Log',
         canDo: function() {
@@ -10635,40 +10760,6 @@ function _rebuildStackMesh(stack) {
     stack.meshGroup = newMesh;
 }
 
-// ── Stack a carried log onto a ground log (creates new stack of 2) ──
-function _stackOntoGroundLog(groundObj, groundMesh, species, speciesName, barkColor, logLen, logLevel) {
-    // Consume one carried log
-    if (typeof consumeCarriedItem === 'function') consumeCarriedItem();
-
-    // Remove the ground log
-    groundObj.alive = false;
-    groundMesh.visible = false;
-    scene.remove(groundMesh);
-    var idx = _groundLogs.indexOf(groundObj);
-    if (idx >= 0) _groundLogs.splice(idx, 1);
-    if (typeof worldObjectGrid !== 'undefined') worldObjectGrid.remove(groundObj);
-
-    // Create stack of 2 at ground log position
-    var stack = _createLogStack(groundObj.x, groundObj.z, groundObj._rotY || 0, species, speciesName, barkColor, logLen, logLevel, 2);
-    var ftLabel = logLevel >= 2 ? '4ft' : logLevel === 1 ? '8ft' : '16ft';
-    showToast(speciesName + ' log stack (' + ftLabel + ')  ×2');
-    if (typeof triggerSave === 'function') triggerSave('log_stacked');
-}
-
-// ── Add carried log to existing stack ──
-function _addToStack(stack) {
-    if (stack.stackCount >= _LOG_STACK_MAX) {
-        showToast('Stack is full (' + _LOG_STACK_MAX + ')');
-        return;
-    }
-    if (typeof consumeCarriedItem === 'function') consumeCarriedItem();
-    stack.stackCount++;
-    _rebuildStackMesh(stack);
-    var ftLabel = stack.stackLevel >= 2 ? '4ft' : stack.stackLevel === 1 ? '8ft' : '16ft';
-    showToast(stack.stackName + ' log stack (' + ftLabel + ')  ×' + stack.stackCount);
-    if (typeof triggerSave === 'function') triggerSave('log_stacked');
-}
-
 // ── Take one log from stack ──
 function _takeFromStack(stack) {
     if (stack.stackCount <= 0) return;
@@ -10687,7 +10778,7 @@ function _takeFromStack(stack) {
         // Pick it up immediately
         var newLog = _groundLogs[_groundLogs.length - 1];
         if (newLog) {
-            newLog.onInspect[1].action(newLog);  // trigger pickup action
+            newLog.onInspect[0].action(newLog);  // trigger pickup action
         }
         return;
     }
@@ -10705,7 +10796,7 @@ function _takeFromStack(stack) {
     );
     var newLog = _groundLogs[_groundLogs.length - 1];
     if (newLog) {
-        newLog.onInspect[1].action(newLog);  // auto pick up
+        newLog.onInspect[0].action(newLog);  // auto pick up
     }
     var ftLabel = stack.stackLevel >= 2 ? '4ft' : stack.stackLevel === 1 ? '8ft' : '16ft';
     showToast('Took ' + ftLabel + ' log  (stack: ' + stack.stackCount + ')');
@@ -12222,6 +12313,10 @@ function _registerRockCollisions() {
 
         // Mining — pickaxe hits drop stone every 5 HP
         obj.acceptsTools = ['pickaxe'];
+        // Mining reach: measure from the rock's VISUAL surface, not its small
+        // collision core — otherwise you'd have to clip into a big boulder to
+        // hit it. interaction.js uses interactR for tool-hit range.
+        obj.interactR = visualR;
         obj.getToolLabel = function() { return '[F] Mine'; };
         obj._lastDropHp = Math.floor(obj.hp / 5) * 5;  // track which 5-HP threshold we last dropped at
         obj.onToolHit = (function(o, label) {
@@ -12232,20 +12327,8 @@ function _registerRockCollisions() {
 
                 if (typeof triggerToolSwing === 'function') triggerToolSwing(tool.anim || 'chop', tool.swingSpeed || 0.4);
 
-                // Rock hit sound — sharp clank
-                if (typeof audioCtx !== 'undefined' && typeof ensureAudioInit === 'function') {
-                    ensureAudioInit();
-                    var now = audioCtx.currentTime;
-                    var osc = audioCtx.createOscillator();
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(280 + Math.random() * 60, now);
-                    osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
-                    var gain = audioCtx.createGain();
-                    gain.gain.setValueAtTime(0.12, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-                    osc.connect(gain); _connectAtPlayer(gain);
-                    osc.start(now); osc.stop(now + 0.1);
-                }
+                // Rock hit sound — recorded pickaxe strike (replaces the old square-wave clank)
+                if (window._sfx) window._sfx.play('pick', 0.7);
 
                 // Spawn chips
                 if (typeof spawnWoodChips === 'function') {
@@ -18482,6 +18565,13 @@ function getHeldItemMesh(itemType) {
         mesh = buildHoeMesh();
     } else if (itemType === 'stone_shovel') {
         mesh = buildShovelMesh();
+    } else if (itemType === 'watering_can') {
+        // No dedicated builder — reuse the item's icon mesh (a fresh clone),
+        // scaled down for the hand. Scale + rotation are first-pass; tune by eye.
+        if (typeof _buildIconMesh === 'function') {
+            mesh = _buildIconMesh('watering_can');
+            if (mesh) mesh.scale.setScalar(0.6);
+        }
     }
 
     if (mesh) _heldItemMeshes[itemType] = mesh;
@@ -18535,6 +18625,8 @@ function updateHeldItem() {
                     mesh.rotation.set(-1.5, 1.80, 0);   // axe: head down, blade forward
                 } else if (showTool === 'pocket_knife') {
                     mesh.rotation.set(-1.5, 0.90, 0);   // knife: blade forward-down
+                } else if (showTool === 'watering_can') {
+                    mesh.rotation.set(0.2, 0.785, 0.1);  // can: upright, spout angled ~45° toward front
                 } else {
                     mesh.rotation.set(-1.5, 0, 0);      // default
                 }
@@ -23601,6 +23693,32 @@ var _toolSwingLayer = poseController.registerLayer('toolSwing', {
             v.rightArm.z = armZ;
             v.body.x = 0;
             v.body.z = bodyTwistZ;
+
+        } else if (toolSwing.anim === 'mine') {
+            // Like the foraging hip-hinge (torso folds forward) but with a
+            // pickaxe arm swing. Sign conventions (see harvest_anim.js):
+            //   body.x NEGATIVE = forward lean;  arm.x POSITIVE = arm forward.
+            var armX, bodyHingeX;
+            if (t < 0.20) {
+                var p = t / 0.20;            // windup — raise the arm, torso starts to fold
+                var e = p * p;
+                armX = e * 2.7;
+                bodyHingeX = e * -0.15;
+            } else if (t < 0.55) {
+                var p = (t - 0.20) / 0.35;   // strike — arm swings down/forward, hips hinge forward
+                var ease = 1 - (1 - p) * (1 - p);
+                armX = 2.7 - ease * (2.7 - 1.2);
+                bodyHingeX = -0.15 - ease * 0.50;   // forward hinge to ~-0.65 (matches the forage bend)
+            } else {
+                var p = (t - 0.55) / 0.45;   // recover — straighten + arm back to neutral
+                var ease = p * p * (3 - 2 * p);
+                armX = 1.2 - ease * 1.2;
+                bodyHingeX = -0.65 + ease * 0.65;
+            }
+            v.rightArm.x = armX;
+            v.rightArm.z = 0.25;
+            v.body.x = bodyHingeX;
+            v.body.z = 0;
         }
     }
 });
@@ -28309,8 +28427,10 @@ function findNearestInteractableFirstPerson() {
         let t = Infinity;
 
         if (obj.shape === 'circle') {
-            // Ray-circle in XZ (with +0.25 generous hit radius for usability)
-            const radius = (obj.r || 0.5) + 0.25;
+            // Ray-circle in XZ (with +0.25 generous hit radius for usability).
+            // interactR (e.g. a boulder's visual size) overrides the small
+            // collision core so you can hit from the visible surface.
+            const radius = (obj.interactR || obj.r || 0.5) + 0.25;
             const ocx = ex - obj.x, ocz = ez - obj.z;
             const a = rx * rx + rz * rz;
             const b = 2 * (ocx * rx + ocz * rz);
@@ -28373,15 +28493,20 @@ function findNearestInteractable() {
 
         const dx = obj.x - playerPos.x, dz = obj.z - playerPos.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist > INTERACT_RANGE) continue;
+        // Objects with interactR (boulders) are reachable from their SURFACE +
+        // a ~3ft tool reach, not their center — so a big rock can be mined
+        // without clipping into it. Everything else uses plain center distance.
+        const edge = (obj.interactR != null) ? Math.max(0, dist - obj.interactR) : dist;
+        const reach = (obj.interactR != null) ? 0.9 : INTERACT_RANGE;
+        if (edge > reach) continue;
 
         // Inline dot product instead of allocating Vector2
         const invDist = 1 / (dist || 0.001);
         const dot = facing.x * (dx * invDist) + facing.y * (dz * invDist);
         if (dot < Math.cos(INTERACT_ANGLE / 2)) continue;
 
-        if (dist < bestDist) {
-            bestDist = dist;
+        if (edge < bestDist) {
+            bestDist = edge;
             best = obj;
         }
     }
@@ -28770,7 +28895,7 @@ const ITEM_TYPES = {
     building_hammer: { label: 'Hammer',            abbr: 'HMR', category: 'tool', maxStack: 1, size: 'small',
                        tool: { category: 'buildingHammer', anim: 'hammer' } },
     pickaxe:         { label: 'Pickaxe',           abbr: 'PIK', category: 'tool', maxStack: 1, size: 'small',
-                       tool: { category: 'pickaxe', damage: 1, swingSpeed: 0.4, anim: 'chop' } },
+                       tool: { category: 'pickaxe', damage: 1, swingSpeed: 0.5, anim: 'mine' } },
     stone_hoe:       { label: 'Stone Hoe',         abbr: 'HOE', category: 'tool', maxStack: 1, size: 'small',
                        tool: { category: 'hoe', swingSpeed: 0.4, anim: 'chop' } },
     stone_shovel:    { label: 'Stone Shovel',      abbr: 'SHV', category: 'tool', maxStack: 1, size: 'small',
@@ -28784,7 +28909,7 @@ const ITEM_TYPES = {
     water_bottle:    { label: 'Water Bottle',     abbr: 'BTL', category: 'water', maxStack: 1, size: 'small',
                        tool: { category: 'waterBottle', capacity: 1, anim: 'drink' } },
     watering_can:    { label: 'Watering Can',     abbr: 'WCN', category: 'tool', maxStack: 1, size: 'small',
-                       tool: { category: 'wateringCan', capacity: 4, anim: 'pour' } },
+                       tool: { category: 'wateringCan', capacity: 10, anim: 'pour' } },
 
     // ── Food (raw / foraged) — low stack limits force meal planning ──
     wild_mushroom:   { label: 'Wild Mushroom',    abbr: 'MSH', category: 'foraged', maxStack: 5, size: 'small' },
@@ -28945,6 +29070,60 @@ const ITEM_TYPES = {
     creek_water:     { label: 'Creek Water',      abbr: 'WTR', category: 'water', maxStack: 99, size: 'small' },
     boiled_water:    { label: 'Boiled Water',     abbr: 'CLN', category: 'water', maxStack: 99, size: 'small' },
 };
+
+// Foraged wild edibles all stack to 20 (berries, mushrooms, wild greens/roots/
+// nuts). Listed explicitly so cultivated crops — which share the 'foraged'
+// category — keep their own stack sizes. Added 2026-05-30 per Barron.
+['wild_mushroom', 'bolete', 'amanita', 'morel',
+ 'wild_berry', 'wild_raspberry', 'wild_strawberry', 'elderberry',
+ 'wild_onion', 'miners_lettuce', 'wild_carrot', 'cattail_root', 'pinon_nut'
+].forEach(function(_fid) { if (ITEM_TYPES[_fid]) ITEM_TYPES[_fid].maxStack = 20; });
+
+// ── Dropped-item world scale (longest axis, METERS) ───────────────────────
+// _spawnGroundItem() fits each item's icon-mesh longest bbox axis to this so
+// items read at a believable size on the ground (player capsule = 1.8m).
+// Centralized here so tuning is one-number-per-item. Wood/lumber already
+// carries inline `worldSize` (set during the May-15 sizing pass) — the loop
+// below only fills items that don't have one, so it won't override those.
+// Added 2026-05-30 (item-scale pass, remaining categories).
+var _ITEM_WORLD_SIZES = {
+    // Tools
+    pocket_knife: 0.12, hatchet: 0.42, stone_axe: 0.70, iron_axe: 0.72,
+    building_hammer: 0.33, pickaxe: 0.70, stone_hoe: 1.18, stone_shovel: 1.15,
+    cane_pole: 2.00, watering_can: 0.30,
+    // Vessels / liquids
+    water_jug: 0.26, water_bottle: 0.22, creek_water: 0.16, boiled_water: 0.16,
+    // Animal products & fish
+    rabbit_meat: 0.16, roasted_rabbit: 0.26, rabbit_hide: 0.42,
+    deer_hide: 1.10, elk_hide: 1.50, venison: 0.28, cured_venison: 0.26,
+    raw_trout: 0.22, smoked_trout: 0.22, jerky: 0.12,
+    // Foraged foods
+    wild_mushroom: 0.09, bolete: 0.10, amanita: 0.10, morel: 0.09, chanterelle: 0.09,
+    wild_berry: 0.05, wild_raspberry: 0.05, wild_strawberry: 0.05, elderberry: 0.06,
+    wild_onion: 0.10, miners_lettuce: 0.11, wild_carrot: 0.18, cattail_root: 0.22,
+    pinon_nut: 0.04, dandelion: 0.12, yarrow: 0.16, pine_pitch: 0.10,
+    // Cultivated produce
+    carrot: 0.18, radish: 0.07, lettuce: 0.16, arugula: 0.14, spinach: 0.14,
+    bean_pod: 0.12, beet: 0.10, turnip: 0.10, onion: 0.10, kale: 0.18,
+    strawberry: 0.05, tomato: 0.08, pepper: 0.12, broccoli: 0.16, potato: 0.10, squash: 0.22,
+    // Cooked / prepared foods (bowls ~0.18)
+    honey: 0.12, mushroom_broth: 0.18, berry_compote: 0.18, forest_stew: 0.18,
+    venison_stew: 0.18, pan_trout: 0.22, roasted_carrot: 0.20, roasted_onion: 0.10,
+    roasted_pinon: 0.06, elderberry_syrup: 0.16,
+    dried_mushrooms: 0.10, dried_berries: 0.08, dried_yarrow: 0.16,
+    // Raw materials
+    stone: 0.12, dam_boulder: 0.45, plant_fiber: 0.20, fiber_cord: 0.15,
+    rope: 0.20, cloth: 0.30, iron_nail: 0.06, salt: 0.10, jar: 0.15,
+    sharp_stone: 0.10, pitch_glue: 0.12, tinder_bundle: 0.16, wooden_bowl: 0.18,
+    wood_hook: 0.04, mushroom_lure: 0.05, tied_fly: 0.03, rot: 0.14,
+    // Clothing
+    woven_wrap: 0.42, padded_vest: 0.46, wool_coat: 0.55, winter_coat: 0.58, canvas_jacket: 0.50,
+};
+Object.keys(_ITEM_WORLD_SIZES).forEach(function(_wid) {
+    if (ITEM_TYPES[_wid] && ITEM_TYPES[_wid].worldSize == null) {
+        ITEM_TYPES[_wid].worldSize = _ITEM_WORLD_SIZES[_wid];
+    }
+});
 
 // ═══════════════════════════════════════════════════════════════════════
 // CONTAINER — Generic container class
@@ -29130,7 +29309,10 @@ function canStackCarry(type, data) {
 var _invMatPool = new Map();
 function _pooledMat(color) {
     if (_invMatPool.has(color)) return _invMatPool.get(color);
-    var mat = _pooledMat(color);
+    // Was `_pooledMat(color)` — infinite self-recursion (latent bug, masked
+    // only because a duplicate definition in another module shadowed this at
+    // runtime). Create the actual icon material here so this copy is self-sufficient.
+    var mat = new THREE.MeshLambertNodeMaterial({ color: color });
     _invMatPool.set(color, mat);
     return mat;
 }
@@ -29689,6 +29871,38 @@ function _buildIconMeshFresh(type) {
         m.scale.setScalar(2.0);
         m.rotation.set(-0.2, 0.4, -Math.PI / 6);
         return _centerIconMesh(m);
+    }
+    // Hunting rifle — reuse the real first-person rifle model (built in rifle.js,
+    // parented to the camera + hidden). Clone it for a static icon; the clone
+    // inherits visible=false from the root, so flip it back on. _centerIconMesh
+    // reframes it, so intrinsic scale/placement don't matter.
+    if (type === 'hunting_rifle' && window._rifleModel) {
+        var m = window._rifleModel.clone();
+        m.visible = true;
+        m.position.set(0, 0, 0);
+        m.rotation.set(-0.12, 0.7, 0.05);   // 3/4 presentation angle
+        m.scale.setScalar(1);
+        return _centerIconMesh(m);
+    }
+    // Rifle round — small brass cartridge with a copper-jacketed tip.
+    if (type === 'rifle_round') {
+        var g = new THREE.Group();
+        var brass = _pooledMat(0xb8922c);   // cartridge brass
+        var jacket = _pooledMat(0x9a5a32);  // copper bullet jacket
+        var caseBody = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.18, 12), brass);
+        caseBody.position.y = -0.02;
+        g.add(caseBody);
+        var rim = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 12), brass);
+        rim.position.y = -0.115;
+        g.add(rim);
+        var shoulder = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.05, 0.05, 12), brass);
+        shoulder.position.y = 0.09;
+        g.add(shoulder);
+        var tip = new THREE.Mesh(new THREE.ConeGeometry(0.038, 0.075, 12), jacket);
+        tip.position.y = 0.15;
+        g.add(tip);
+        g.rotation.set(0, 0, Math.PI * 0.14);   // slight tilt
+        return _centerIconMesh(g);
     }
     // Placeable structure icons — miniature versions of their placed models
     if (type === 'fire_pit_item') {
@@ -31191,6 +31405,268 @@ function _buildIconMeshFresh(type) {
             g.add(_trG);
             break;
         }
+        // ════════ Added 2026-05-30: models for items that fell to the cube ════════
+        // ── Raw materials ──
+        case 'salt': {
+            var _saltMat = _pooledMat(0xe8e6e0);
+            var _saltPile = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.14, 7), _saltMat);
+            _saltPile.position.y = -0.05;
+            g.add(_saltPile);
+            for (var _sgi = 0; _sgi < 4; _sgi++) {
+                var _sga = (_sgi / 4) * Math.PI * 2;
+                var _grain = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.04), _saltMat);
+                _grain.position.set(Math.cos(_sga) * 0.13, -0.06, Math.sin(_sga) * 0.13);
+                _grain.rotation.set(_sga, _sga, 0);
+                g.add(_grain);
+            }
+            break;
+        }
+        case 'cloth': {
+            var _clothMat = _pooledMat(0xcabf9e);
+            var _clothBody = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.07, 0.24), _clothMat);
+            g.add(_clothBody);
+            var _clothFold = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.05, 0.10), _pooledMat(0xb3a886));
+            _clothFold.position.set(0, 0.05, -0.04);
+            g.add(_clothFold);
+            g.rotation.set(-0.3, 0.4, 0);
+            break;
+        }
+        case 'rope': {
+            var _ropeMat = _pooledMat(0xa07a44);
+            var _coil1 = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.045, 6, 14), _ropeMat);
+            _coil1.rotation.x = Math.PI / 2;
+            g.add(_coil1);
+            var _coil2 = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.04, 6, 12), _ropeMat);
+            _coil2.rotation.x = Math.PI / 2;
+            _coil2.position.y = 0.06;
+            g.add(_coil2);
+            break;
+        }
+        case 'iron_nail': {
+            var _nailMat = _pooledMat(0x60636a);
+            var _shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.008, 0.34, 6), _nailMat);
+            g.add(_shaft);
+            var _nhead = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 8), _nailMat);
+            _nhead.position.y = 0.17;
+            g.add(_nhead);
+            g.rotation.set(0, 0, Math.PI * 0.18);
+            break;
+        }
+        case 'wooden_bowl': {
+            var _bowl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 6, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5), _pooledMat(0x8a6038));
+            _bowl.scale.set(1.0, 0.7, 1.0);
+            g.add(_bowl);
+            var _brim = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.018, 6, 16), _pooledMat(0x9a7048));
+            _brim.rotation.x = Math.PI / 2;
+            g.add(_brim);
+            break;
+        }
+        case 'water_jug': {
+            var _jugMat = _pooledMat(0xa86a44);
+            var _jbody = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.13, 0.22, 10), _jugMat);
+            g.add(_jbody);
+            var _jneck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.08, 8), _jugMat);
+            _jneck.position.y = 0.15;
+            g.add(_jneck);
+            var _jhandle = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.018, 5, 8, Math.PI), _jugMat);
+            _jhandle.position.set(0.13, 0.05, 0);
+            _jhandle.rotation.z = -Math.PI / 2;
+            g.add(_jhandle);
+            break;
+        }
+        case 'dam_boulder': {
+            var _bo = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), _pooledMat(0x7c8088));
+            _bo.rotation.set(0.4, 0.6, 0.2);
+            g.add(_bo);
+            break;
+        }
+        case 'log_4ft':
+        case 'log_4ft_pinon': {
+            var _logCol = type === 'log_4ft_pinon' ? 0x7a5a38 : 0x6e5535;
+            var _log = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 0.40, 9), _pooledMat(_logCol));
+            _log.rotation.z = Math.PI / 2;
+            g.add(_log);
+            var _ringMat = _pooledMat(0xb89a6a);
+            var _ringL = new THREE.Mesh(new THREE.CircleGeometry(0.10, 9), _ringMat);
+            _ringL.position.x = 0.201; _ringL.rotation.y = Math.PI / 2;
+            g.add(_ringL);
+            var _ringR = new THREE.Mesh(new THREE.CircleGeometry(0.10, 9), _ringMat);
+            _ringR.position.x = -0.201; _ringR.rotation.y = -Math.PI / 2;
+            g.add(_ringR);
+            g.rotation.set(0.2, 0.3, 0);
+            break;
+        }
+        case 'wood_plank': {
+            var _plk = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.03, 0.12), _pooledMat(0x9a7a4a));
+            g.add(_plk);
+            g.rotation.set(-0.2, 0.3, 0.05);
+            break;
+        }
+        // ── Foods ──
+        case 'venison': {
+            var _vcut = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.10, 0.20), _pooledMat(0x8a2c20));
+            g.add(_vcut);
+            var _vfat = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.025, 0.20), _pooledMat(0xc89a8a));
+            _vfat.position.y = 0.06;
+            g.add(_vfat);
+            g.rotation.set(-0.25, 0.4, 0);
+            break;
+        }
+        case 'cured_venison': {
+            var _cv = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.05, 0.14), _pooledMat(0x6a241a));
+            g.add(_cv);
+            var _cvEdge = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.052, 0.04), _pooledMat(0x3a140e));
+            _cvEdge.position.z = 0.05;
+            g.add(_cvEdge);
+            g.rotation.set(-0.3, 0.35, 0.05);
+            break;
+        }
+        case 'honey': {
+            var _hbody = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.20, 10), _pooledMat(0xe0a828));
+            g.add(_hbody);
+            var _hlid = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.04, 10), _pooledMat(0x8a5a20));
+            _hlid.position.y = 0.12;
+            g.add(_hlid);
+            break;
+        }
+        case 'mushroom_broth': {
+            var _mbBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.10, 12), _pooledMat(0x8a6038));
+            g.add(_mbBowl);
+            var _mbLiq = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.02, 12), _pooledMat(0x9a7038));
+            _mbLiq.position.y = 0.045;
+            g.add(_mbLiq);
+            var _mbCap = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4, 0, Math.PI * 2, 0, Math.PI * 0.6), _pooledMat(0x7a4520));
+            _mbCap.scale.set(1, 0.6, 1); _mbCap.position.set(0.04, 0.06, 0.02);
+            g.add(_mbCap);
+            break;
+        }
+        case 'berry_compote': {
+            var _bcBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.10, 12), _pooledMat(0x8a6038));
+            g.add(_bcBowl);
+            var _bcLiq = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.025, 12), _pooledMat(0x8a2a4a));
+            _bcLiq.position.y = 0.045;
+            g.add(_bcLiq);
+            for (var _bci = 0; _bci < 3; _bci++) {
+                var _bcb = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 5), _pooledMat(0xb03a5a));
+                _bcb.position.set(-0.04 + _bci * 0.04, 0.06, 0.02);
+                g.add(_bcb);
+            }
+            break;
+        }
+        case 'forest_stew':
+        case 'venison_stew': {
+            var _stewCol = type === 'venison_stew' ? 0x6a3820 : 0x7a5a30;
+            var _stBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.10, 12), _pooledMat(0x8a6038));
+            g.add(_stBowl);
+            var _stLiq = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.025, 12), _pooledMat(_stewCol));
+            _stLiq.position.y = 0.045;
+            g.add(_stLiq);
+            var _chunkCols = type === 'venison_stew' ? [0x8a2c20, 0xd0902a, 0x6a8030] : [0xd0902a, 0x6a8030, 0xc23a3a];
+            for (var _sci = 0; _sci < 3; _sci++) {
+                var _ch = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.04), _pooledMat(_chunkCols[_sci]));
+                _ch.position.set(-0.05 + _sci * 0.05, 0.065, 0.01);
+                _ch.rotation.set(_sci, _sci, 0);
+                g.add(_ch);
+            }
+            break;
+        }
+        case 'roasted_carrot': {
+            var _rcBody = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.30, 8), _pooledMat(0xc06822));
+            _rcBody.rotation.z = Math.PI * 0.5;
+            g.add(_rcBody);
+            var _rcTip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 8), _pooledMat(0x6a3a18));
+            _rcTip.rotation.z = -Math.PI * 0.5; _rcTip.position.x = -0.17;
+            g.add(_rcTip);
+            g.rotation.set(0, 0, 0.2);
+            break;
+        }
+        case 'carrot': {
+            var _caBody = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.30, 8), _pooledMat(0xe07820));
+            _caBody.rotation.z = Math.PI;
+            _caBody.position.y = -0.02;
+            g.add(_caBody);
+            for (var _cli = 0; _cli < 3; _cli++) {
+                var _cla = (_cli / 3) * Math.PI * 2;
+                var _leaf = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.12, 4), _pooledMat(0x4a8030));
+                _leaf.position.set(Math.cos(_cla) * 0.03, 0.16, Math.sin(_cla) * 0.03);
+                _leaf.rotation.set(Math.sin(_cla) * 0.4, 0, Math.cos(_cla) * 0.4);
+                g.add(_leaf);
+            }
+            break;
+        }
+        // ── Liquids ──
+        case 'creek_water':
+        case 'boiled_water': {
+            var _wBoiled = type === 'boiled_water';
+            var _wBlob = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), _pooledMat(_wBoiled ? 0x9ac8d8 : 0x5a90b0));
+            _wBlob.scale.set(1.0, 0.85, 1.0);
+            g.add(_wBlob);
+            if (_wBoiled) {
+                for (var _wsi = 0; _wsi < 3; _wsi++) {
+                    var _steam = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 5), _pooledMat(0xe8f0f4));
+                    _steam.position.set(-0.05 + _wsi * 0.05, 0.16 + _wsi * 0.03, 0);
+                    g.add(_steam);
+                }
+            }
+            break;
+        }
+        case 'rot': {
+            var _rotMat = _pooledMat(0x5a5226);
+            for (var _ri = 0; _ri < 4; _ri++) {
+                var _ra = (_ri / 4) * Math.PI * 2;
+                var _lump = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 5), _rotMat);
+                _lump.position.set(Math.cos(_ra) * 0.06, 0, Math.sin(_ra) * 0.06);
+                _lump.scale.set(1, 0.8, 1);
+                g.add(_lump);
+            }
+            var _mold = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 5), _pooledMat(0x6a7a3a));
+            _mold.position.set(0.03, 0.07, 0.02);
+            g.add(_mold);
+            break;
+        }
+        // ── Hides ──
+        case 'deer_hide':
+        case 'elk_hide': {
+            var _hideCol = type === 'elk_hide' ? 0x6a4e34 : 0x9a7850;
+            var _hide = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, 0.26), _pooledMat(_hideCol));
+            g.add(_hide);
+            var _belly = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.032, 0.12), _pooledMat(0xcabba0));
+            _belly.position.set(0.02, 0.001, 0);
+            g.add(_belly);
+            g.rotation.set(-0.35, 0.3, 0.04);
+            break;
+        }
+        // ── Clothing ──
+        case 'woven_wrap':
+        case 'padded_vest':
+        case 'wool_coat':
+        case 'winter_coat':
+        case 'canvas_jacket': {
+            var _clCol = type === 'woven_wrap' ? 0xa88858
+                : type === 'padded_vest' ? 0x8a7050
+                : type === 'wool_coat' ? 0x6a5e50
+                : type === 'winter_coat' ? 0x4a4038
+                : 0x7a7048;
+            var _clMat = _pooledMat(_clCol);
+            var _torso = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 0.10), _clMat);
+            g.add(_torso);
+            var _shoul = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.08, 0.11), _clMat);
+            _shoul.position.y = 0.10;
+            g.add(_shoul);
+            var _collarCol = (type === 'winter_coat') ? 0xe8e4dc : _clCol;
+            var _collar = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.025, 6, 10, Math.PI), _pooledMat(_collarCol));
+            _collar.position.y = 0.15; _collar.rotation.x = Math.PI / 2;
+            g.add(_collar);
+            if (type !== 'woven_wrap') {
+                for (var _qi = 0; _qi < 2; _qi++) {
+                    var _seam = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.26, 0.005), _pooledMat(0x2a2620));
+                    _seam.position.set(-0.06 + _qi * 0.12, 0, 0.051);
+                    g.add(_seam);
+                }
+            }
+            g.scale.setScalar(0.95);
+            break;
+        }
         default:
             // Fallback: colored cube
             var def = ITEM_TYPES[type];
@@ -31209,10 +31685,25 @@ function _buildIconMeshFresh(type) {
 let _iconRT = null;
 let _iconCanvas = null;
 const _iconPending = {};  // type → true while async generation in flight
+let _iconRetryQueued = false;  // one hotbar re-render scheduled for when the renderer init resolves
 
 function getItemIcon(type) {
     if (_itemIcons[type]) return _itemIcons[type];
     if (!renderer) return null;
+
+    // Backend not initialized yet — render() would throw. Reachable when a
+    // multiplayer HELLO restores inventory (→ renderHotbar) before the async
+    // WebGPU adapter/device request resolves on slower PCs. Return null
+    // (slot shows the text fallback) and re-render the hotbar once ready.
+    if (typeof renderer.hasInitialized === 'function' && !renderer.hasInitialized()) {
+        if (!_iconRetryQueued) {
+            _iconRetryQueued = true;
+            (window._rendererReady || Promise.resolve()).then(function() {
+                if (typeof renderHotbar === 'function') renderHotbar();
+            }).catch(function() { /* init failed — overlay already shown */ });
+        }
+        return null;
+    }
 
     // Sync path — WebGL renderer with readRenderTargetPixels
     if (renderer.readRenderTargetPixels) {
@@ -31367,6 +31858,22 @@ async function _generateItemIconAsync(type) {
     delete _iconPending[type];
 }
 
+// Charge/fill bar drawn across the bottom of a tool's icon square (watering can).
+// Reads the live water level; slots re-render when it changes (see watering.js).
+function _appendChargeBar(iconEl, def) {
+    if (!iconEl || !def || !def.tool || def.tool.category !== 'wateringCan' || !window._watering) return;
+    var cap = (window._watering.getCapacity && window._watering.getCapacity()) || 1;
+    var lvl = (window._watering.getWater && window._watering.getWater()) || 0;
+    var ratio = Math.max(0, Math.min(1, lvl / cap));
+    iconEl.style.position = 'relative';
+    var bar = document.createElement('div');
+    bar.style.cssText = 'position:absolute;left:2px;right:2px;bottom:2px;height:4px;background:rgba(0,0,0,0.5);border-radius:2px;overflow:hidden;pointer-events:none;z-index:2;';
+    var fill = document.createElement('div');
+    fill.style.cssText = 'height:100%;width:' + Math.round(ratio * 100) + '%;background:linear-gradient(90deg,#3aa0d8,#8ad8f0);';
+    bar.appendChild(fill);
+    iconEl.appendChild(bar);
+}
+
 function renderHotbar() {
     const container = document.getElementById('hotbar');
     if (!container) return;
@@ -31429,6 +31936,7 @@ function renderHotbar() {
                 hookEl.textContent = (hookDef ? '⌐' : '') + ' x' + hookCount;
                 el.appendChild(hookEl);
             }
+            _appendChargeBar(icon, def);
 
             // Text label under icon
             var lbl = document.createElement('div');
@@ -31721,6 +32229,7 @@ function renderBackpack() {
                 icon.textContent = def.abbr;
             }
             el.appendChild(icon);
+            _appendChargeBar(icon, def);
 
             const labelEl = document.createElement('div');
             labelEl.className = 'item-label';
@@ -34109,6 +34618,7 @@ function _buildRifleModel() {
     scene.add(camera);
     camera.add(grp);
     _rifleModel = grp;
+    window._rifleModel = grp;   // expose for cross-module reuse (inventory.js icon)
 }
 
 // ── Vapor trail ───────────────────────────────────────────────────────
@@ -34657,8 +35167,8 @@ const RECIPES = [
     {
         id: 'fire_pit',
         label: 'Fire Pit',
-        desc: 'Ring of rocks around 4ft logs. Cook food, stay warm, mark your camp. Becomes respawn point.',
-        ingredients: [{ type: 'log_4ft', count: 4 }, { type: 'stone', count: 10 }],
+        desc: 'Ring of rocks around firewood. Cook food, stay warm, mark your camp. Becomes respawn point.',
+        ingredients: [{ type: 'firewood', count: 8 }, { type: 'stone', count: 10 }],
         output: { type: 'fire_pit_item', count: 1 },
         handCraft: true,
         placeId: 'fire_pit',
@@ -35804,6 +36314,7 @@ function tickWoodChips(dt) {
 
 // ── Audio ──
 function playChopSound() {
+    if (window._sfx && window._sfx.play('axe')) return;   // recorded axe chop (synth below is the rare pre-load fallback)
     ensureAudioInit();
     const now = audioCtx.currentTime;
     const osc = audioCtx.createBufferSource();
@@ -35942,6 +36453,73 @@ function playTreeCrashSound() {
     noiseOsc.stop(now + 0.2);
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// RECORDED SFX SETS — shared random-variant one-shot sample player
+// ═══════════════════════════════════════════════════════════════════════
+// One loader/player for recorded one-shot SFX with multiple variants (axe
+// chop, pickaxe strike, log placement). Lives here because chopping.js owns
+// audioCtx + ensureAudioInit; exposed on window so rocks.js / building call it
+// cross-module. Eager-primed on first user gesture so the first action plays a
+// real recording (audioCtx only exists after a gesture). play() returns true
+// only if a recorded variant actually played, so callers can fall back.
+window._sfx = (function() {
+    var sets = {};
+    function register(name, urls) { sets[name] = { urls: urls, buffers: [], loadStarted: false, lastIdx: -1 }; }
+    function load(name) {
+        var s = sets[name];
+        if (!s || s.loadStarted || typeof audioCtx === 'undefined' || !audioCtx) return;
+        s.loadStarted = true;
+        s.urls.forEach(function(u) {
+            fetch(u)
+                .then(function(r) { if (!r.ok) throw new Error('sfx ' + u); return r.arrayBuffer(); })
+                .then(function(ab) { return audioCtx.decodeAudioData(ab); })
+                .then(function(buf) { s.buffers.push(buf); })
+                .catch(function() {});
+        });
+    }
+    function play(name, vol) {
+        if (typeof ensureAudioInit === 'function') ensureAudioInit();
+        if (typeof audioCtx === 'undefined' || !audioCtx) return false;
+        var s = sets[name];
+        if (!s) return false;
+        load(name);
+        if (!s.buffers.length) return false;
+        var idx;
+        if (s.buffers.length === 1) idx = 0;
+        else { do { idx = Math.floor(Math.random() * s.buffers.length); } while (idx === s.lastIdx); s.lastIdx = idx; }
+        var src = audioCtx.createBufferSource();
+        src.buffer = s.buffers[idx];
+        src.playbackRate.value = 1.0 + (Math.random() - 0.5) * 0.06;   // slight variety
+        var g = audioCtx.createGain();
+        g.gain.value = (vol != null) ? vol : 0.85;
+        src.connect(g);
+        g.connect(audioCtx.destination);
+        src.start(0);
+        return true;
+    }
+    return { register: register, load: load, play: play };
+})();
+window._sfx.register('axe', [
+    '/_assets/audio/character/chop/axe1.m4a', '/_assets/audio/character/chop/axe2.m4a',
+    '/_assets/audio/character/chop/axe3.m4a', '/_assets/audio/character/chop/axe4.m4a'
+]);
+window._sfx.register('pick', [
+    '/_assets/audio/character/mining/pick1.m4a', '/_assets/audio/character/mining/pick2.m4a',
+    '/_assets/audio/character/mining/pick3.m4a', '/_assets/audio/character/mining/pick4.m4a'
+]);
+window._sfx.register('logstack', [
+    '/_assets/audio/character/building/logstack1.m4a', '/_assets/audio/character/building/logstack2.m4a'
+]);
+(function _primeSfxOnGesture() {
+    function prime() {
+        if (typeof ensureAudioInit === 'function') ensureAudioInit();
+        window._sfx.load('axe'); window._sfx.load('pick'); window._sfx.load('logstack');
+    }
+    window.addEventListener('pointerdown', prime, { once: true });
+    window.addEventListener('keydown', prime, { once: true });
+    window.addEventListener('touchstart', prime, { once: true });
+})();
+
 
 // ═══ harvest_anim ══════════════════════════════════════
 /**
@@ -36063,24 +36641,18 @@ function playTreeCrashSound() {
         return Math.max(0.3, 1.0 - (dist - 5) / 25 * 0.7);
     }
 
-    // Synthesized fallback — used only if real samples haven't loaded yet
-    function _playSynthFallback() {
-        var now = audioCtx.currentTime;
-        var gain = audioCtx.createGain();
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.12, now + 0.006);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        gain.connect(audioCtx.destination);
-        var freqs = [880, 1100];
-        for (var i = 0; i < freqs.length; i++) {
-            var osc = audioCtx.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freqs[i], now);
-            osc.connect(gain);
-            osc.start(now);
-            osc.stop(now + 0.20);
-        }
+    // Eager-prime the recorded pops on the first user gesture (audioCtx only
+    // exists after a gesture). This makes the very first harvest/drink play a
+    // real pop. The old synthesized-chime fallback was removed — it was
+    // immersion-breaking (per Barron, 2026-05-30); silence is better than a
+    // bad chime in the rare pre-load window.
+    function _primePopAudio() {
+        if (typeof ensureAudioInit === 'function') ensureAudioInit();
+        _loadPopAudio();
     }
+    window.addEventListener('pointerdown', _primePopAudio, { once: true });
+    window.addEventListener('keydown',     _primePopAudio, { once: true });
+    window.addEventListener('touchstart',  _primePopAudio, { once: true });
 
     function _playPop() {
         if (typeof ensureAudioInit === 'function') ensureAudioInit();
@@ -36089,8 +36661,8 @@ function playTreeCrashSound() {
 
         var buf = _pickPop();
         if (!buf) {
-            // Samples still loading — use synth fallback this once
-            _playSynthFallback();
+            // Samples not loaded yet — stay silent (no synth chime). Pops are
+            // eager-primed on first gesture, so this is rare.
             return;
         }
 
@@ -36108,13 +36680,18 @@ function playTreeCrashSound() {
         src.start(now);
     }
 
-    // ── Public entry point ──
-    window.playHarvestBend = function() {
+    // ── Public entry points ──
+    // playBendPose() = the kneel/bend motion only (silent). playHarvestBend()
+    // = bend + recorded pop. (Watering uses bend + creek sound instead of pop.)
+    window.playBendPose = function() {
         _initLayer();
         if (typeof poseController === 'undefined') return;
         _state.t = 0;
         _state.playing = true;
         poseController.setActive(LAYER_NAME, true);
+    };
+    window.playHarvestBend = function() {
+        window.playBendPose();
         _playPop();
     };
 })();
@@ -36506,8 +37083,12 @@ registerAction('PLACE_PIECE', function(action) {
     _pendingPieceId = p.pieceId;
     try {
         switch (p.type) {
-            case 'log':
-                return _spawnLog(pos, p.rotY, p.length || 2.4, p.tiltAngle || 0, p.tint || null, p.species || null);
+            case 'log': {
+                var _logPiece = _spawnLog(pos, p.rotY, p.length || 2.4, p.tiltAngle || 0, p.tint || null, p.species || null);
+                // Recorded log-stack clack — local placements only (don't fire on peer placements in MP).
+                if (_logPiece && (!action.origin || action.origin === 'local') && window._sfx) window._sfx.play('logstack', 0.7);
+                return _logPiece;
+            }
             case 'roof_panel':
                 return _spawnRoofPanel(pos, p.rotY, p.roofAngle || 30);
             case 'roof_ridge':
@@ -37959,7 +38540,14 @@ function _spawnFoundation(pos, rotY, fw, yOff) {
 // mesh) since a single quad doesn't qualify for a merge.
 function _buildRaisedBedModel(ghost, opts) {
     opts = opts || {};
-    var hidden = opts.hiddenSides || [];
+    // Keep each bed's full model when snapped together — never hide shared
+    // walls. Hiding the seam wall only looked right if the soil also merged
+    // across it, which it doesn't (leaving a broken gap). Per Barron 2026-05-30:
+    // beds sit flush with a double wall at the seam, every wall intact. Forcing
+    // `hidden = []` here neuters every hiding path (spawn / neighbor-rebuild /
+    // load-recompute) at the render level; the adjacency bookkeeping still runs
+    // but no longer affects what's drawn.
+    var hidden = [];  // was: opts.hiddenSides || []
     var hide = { north: false, south: false, east: false, west: false };
     for (var hi = 0; hi < hidden.length; hi++) hide[hidden[hi]] = true;
 
@@ -45008,7 +45596,7 @@ var STAM_COST = {
 var SP5_FIRE_BONUS = 2;          // extra Sp5 near fire
 var HYDRATION_MULT_MIN = 0.5;    // dehydrated regen multiplier
 var HYDRATION_MULT_MAX = 1.4;    // well-hydrated regen multiplier
-var HYDRATION_DECAY_RATE = 0.8;  // hydration drops per game-hour
+var HYDRATION_DECAY_RATE = 0.08;  // hydration lost per game-hour (full → thirsty ~0.6 in ~5h)
 
 // ── Ceiling decay ──
 var CEILING_FOOD_ATROPHY_STEP = 5;  // food buffs decay in steps of 5
@@ -45165,8 +45753,9 @@ function tickVitals(dt) {
         }
     }
 
-    // ── Hydration decay ──
-    stamina.hydration = Math.max(0, stamina.hydration - HYDRATION_DECAY_RATE * dh * 0.01);
+    // ── Hydration decay ── (dh = game-hours this tick, same unit as restQuality below.
+    // Was `* 0.01` which throttled decay to ~0.008/h — you'd never get thirsty.)
+    stamina.hydration = Math.max(0, stamina.hydration - HYDRATION_DECAY_RATE * dh);
 
     // ── Rest quality fade (fades through the day) ──
     stamina.restQuality = Math.max(0, stamina.restQuality - 0.04 * dh);
@@ -48147,14 +48736,95 @@ function updateWaterTankHUD() {
 }
 
 function tickWater() {
-    // Update drink hint visibility
-    const drinkHintEl = document.getElementById('drinkHint');
-    const hasWater = countItem('creek_water') > 0 || countItem('boiled_water') > 0;
-    if (drinkHintEl) drinkHintEl.style.display = hasWater ? 'block' : 'none';
+    // (#drinkHint is now owned by the direct-creek-drink prompt tick below.
+    // The old "hint shows when you carry water items" behavior is superseded
+    // by drinking straight from the creek — no vessel, nothing in inventory.)
 }
 
 // Show water tank HUD on load
 updateWaterTankHUD();
+
+// ═══════════════════════════════════════════════════════════════════════
+// DIRECT CREEK DRINKING (no vessel) — added 2026-05-30
+// Walk to the creek while thirsty → E (PC) / tap the prompt (mobile) → kneel
+// + drink → hydration fills. Nothing enters inventory. The hydration level IS
+// the gate: the prompt only appears when hydration < THIRST_THRESHOLD, so one
+// drink quenches you and the prompt vanishes until you're thirsty again — no
+// timer needed. With the watering can equipped, E refills the can instead
+// (watering.js owns that), so drinking only fires bare-handed / other tools.
+// ═══════════════════════════════════════════════════════════════════════
+var CREEK_THIRST_THRESHOLD = 0.6;   // prompt + drink available below this hydration
+var CREEK_DRINK_FILL       = 1.0;   // one drink fills you up
+var _isTouchDrink = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+function _creekThirsty() {
+    return typeof stamina !== 'undefined' && stamina.hydration < CREEK_THIRST_THRESHOLD;
+}
+function _nearCreekForDrink() {
+    if (typeof playerPos === 'undefined') return false;
+    if (!window._watering || typeof window._watering.nearCreek !== 'function') return false;
+    return window._watering.nearCreek(playerPos.x, playerPos.z);
+}
+function _wateringCanEquippedForDrink() {
+    if (typeof getEquippedTool !== 'function') return false;
+    var t = getEquippedTool();
+    return !!(t && t.category === 'wateringCan');
+}
+function _canDrinkFromCreek() {
+    return _nearCreekForDrink() && _creekThirsty() && !_wateringCanEquippedForDrink();
+}
+
+function drinkFromCreek() {
+    if (typeof stamina === 'undefined') return false;
+    if (!_creekThirsty()) {
+        if (typeof showToast === 'function') showToast('Not thirsty right now');
+        return false;
+    }
+    stamina.hydration = Math.min(1.0, CREEK_DRINK_FILL);
+    if (typeof window.playHarvestBend === 'function') window.playHarvestBend();  // kneel-and-drink motion
+    if (typeof showToast === 'function') showToast('Drank from the creek');
+    if (typeof renderVitals === 'function') renderVitals();
+    return true;
+}
+
+// ── Prompt (reuses #drinkHint) — shows only when you can actually drink ──
+var _drinkPromptEl = null;
+var _drinkTapWired = false;
+function _updateCreekDrinkPrompt() {
+    if (!_drinkPromptEl) _drinkPromptEl = document.getElementById('drinkHint');
+    if (!_drinkPromptEl) return;
+    if (!_drinkTapWired) {
+        _drinkTapWired = true;
+        var _tap = function(e) { if (_canDrinkFromCreek()) { e.preventDefault(); drinkFromCreek(); } };
+        _drinkPromptEl.addEventListener('touchend', _tap, { passive: false });
+        _drinkPromptEl.addEventListener('click', _tap);
+    }
+    if (_canDrinkFromCreek()) {
+        _drinkPromptEl.innerHTML = _isTouchDrink ? 'Drink' : '<span style="opacity:0.7">[E]</span> Drink';
+        _drinkPromptEl.style.display = 'block';
+        _drinkPromptEl.style.pointerEvents = _isTouchDrink ? 'auto' : 'none';
+    } else {
+        _drinkPromptEl.style.display = 'none';
+    }
+}
+if (typeof registerTick === 'function') {
+    registerTick('creek_drink_prompt', function(dt) { _updateCreekDrinkPrompt(); });
+}
+
+// ── PC: E near creek + thirsty → drink (mirrors watering.js's E-steal) ──
+if (typeof window.updateInteraction === 'function') {
+    var _origUpdInteractDrink = window.updateInteraction;
+    window.updateInteraction = function(dt) {
+        if (typeof eJustPressed !== 'undefined' && eJustPressed
+            && _canDrinkFromCreek()
+            && (typeof nearestInteractable === 'undefined' || !nearestInteractable)) {
+            drinkFromCreek();
+            eJustPressed = false;
+            return;
+        }
+        return _origUpdInteractDrink.call(this, dt);
+    };
+}
 
 // ═══ shelter ═══════════════════════════════════════════
 /**
@@ -48789,8 +49459,8 @@ function pickaxeTerrainSwing(raiseMode) {
     var hy = getH(hx, hz);
     spawnDust(hx, hy, hz, T.particleCount, T.particleSpeed);
 
-    if (typeof triggerToolSwing === 'function') triggerToolSwing('chop', 0.35);
-    if (typeof playChopSound === 'function') playChopSound();
+    if (typeof triggerToolSwing === 'function') triggerToolSwing('mine', 0.5);
+    if (window._sfx) window._sfx.play('pick', 0.7);   // recorded pickaxe (was the axe chop sound)
 
     return modified;
 }
@@ -51446,6 +52116,57 @@ function _foodForestClearAll() {
     foodForestPlantings = [];
 }
 window._foodForestClearAll = _foodForestClearAll;
+
+// ═══════════════════════════════════════════════════════════════════════
+// WET-SOIL OVERLAY — dark patch under each watered raised-bed slot
+// ═══════════════════════════════════════════════════════════════════════
+// Visual watering feedback: while a bed slot's plant is moist (waterUntilHour
+// in the future), a dark quad sits on its soil; when it dries, is harvested,
+// or the bed is demolished, the patch disappears. Reconcile-based (rebuilt
+// from the live planting list each tick) so it self-heals — no hooks into the
+// many planting-removal sites. Patches are standalone scene meshes (NOT part
+// of the bed's merged piece geometry), so this needs no change to the bed
+// model or the building merge/bake. Added 2026-05-30 per Barron.
+var _wetSoilMat = null;
+var _wetSoilGeo = null;
+var _wetOverlays = {};          // wetKey → THREE.Mesh
+var _wetKeyCounter = 0;
+function _updateWetSoilOverlays() {
+    if (typeof scene === 'undefined') return;
+    var d = (typeof gameDay !== 'undefined') ? gameDay : 1;
+    var t = (typeof gameTime !== 'undefined') ? gameTime : 0;
+    var nowH = d * 24 + t;
+    var seen = {};
+    for (var i = 0; i < foodForestPlantings.length; i++) {
+        var p = foodForestPlantings[i];
+        if (!p || !p.bedRef || p.bedRef.type !== 'raised_bed' || typeof p.slotIdx !== 'number') continue;
+        if (!(p.waterUntilHour > nowH)) continue;           // dry → no patch
+        if (typeof window._raisedBedWorldSlot !== 'function') continue;
+        var wp = window._raisedBedWorldSlot(p.bedRef, p.slotIdx);
+        if (!wp) continue;
+        if (!p._wetKey) p._wetKey = 'w' + (++_wetKeyCounter);
+        seen[p._wetKey] = true;
+        if (!_wetOverlays[p._wetKey]) {
+            if (!_wetSoilMat) _wetSoilMat = new THREE.MeshLambertMaterial({ color: 0x281b10 });
+            if (!_wetSoilGeo) _wetSoilGeo = new THREE.BoxGeometry(0.46, 0.012, 0.46);
+            var m = new THREE.Mesh(_wetSoilGeo, _wetSoilMat);
+            m.castShadow = false;
+            m.receiveShadow = false;
+            m.position.set(wp.x, wp.y + 0.012, wp.z);
+            m.rotation.y = (p.bedRef.rotation && p.bedRef.rotation.y) || 0;
+            scene.add(m);
+            _wetOverlays[p._wetKey] = m;
+        }
+    }
+    // Remove patches for slots no longer moist (dried, harvested, demolished).
+    for (var k in _wetOverlays) {
+        if (!seen[k]) {
+            scene.remove(_wetOverlays[k]);
+            delete _wetOverlays[k];
+        }
+    }
+}
+if (typeof _tickCallbacks !== 'undefined') _tickCallbacks.push(_updateWetSoilOverlays);
 
 // ═══ hunting ═══════════════════════════════════════════
 /* =========================================
@@ -64247,13 +64968,43 @@ registerTick('post_effects_grain', function(_dt) {
 (function() {
     'use strict';
 
-    var DEFAULT_CAPACITY = 4;
+    var DEFAULT_CAPACITY = 10;
     var WATER_DURATION_HOURS = 24;     // each watering keeps a plant going for ~1 in-game day
     var CREEK_FILL_RADIUS    = 2.5;    // m — how close to creek to fill
     var WATER_PLANT_RADIUS   = 2.0;    // m — how close to a planting to water it (with E too)
 
     // ── State (saved) ──
-    var _water = 0;
+    var _water = DEFAULT_CAPACITY;   // start full — a new can comes already filled
+
+    // ── Creek-sound clip (stand-in watering SFX until a real one is recorded) ──
+    var _creekSndBuf = null, _creekSndLoadStarted = false;
+    function _loadCreekSound() {
+        if (_creekSndLoadStarted) return;
+        _creekSndLoadStarted = true;
+        if (typeof audioCtx === 'undefined' || !audioCtx) return;
+        fetch('/_assets/audio/ambient/creekSound.m4a')
+            .then(function(r) { if (!r.ok) throw new Error('creek snd'); return r.arrayBuffer(); })
+            .then(function(ab) { return audioCtx.decodeAudioData(ab); })
+            .then(function(buf) { _creekSndBuf = buf; })
+            .catch(function() {});
+    }
+    function _playCreekClip() {
+        if (typeof ensureAudioInit === 'function') ensureAudioInit();
+        if (typeof audioCtx === 'undefined' || !audioCtx) return;
+        _loadCreekSound();
+        if (!_creekSndBuf) return;
+        var now = audioCtx.currentTime;
+        var src = audioCtx.createBufferSource();
+        src.buffer = _creekSndBuf;
+        var gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.0, now);
+        gain.gain.linearRampToValueAtTime(0.5, now + 0.05);   // quick fade-in
+        gain.gain.setValueAtTime(0.5, now + 0.85);
+        gain.gain.linearRampToValueAtTime(0.0, now + 1.05);   // ~1s clip, fade out
+        src.connect(gain); gain.connect(audioCtx.destination);
+        src.start(now);
+        src.stop(now + 1.1);
+    }
 
     function _capacity() {
         if (typeof ITEM_TYPES !== 'undefined') {
@@ -64266,15 +65017,23 @@ registerTick('post_effects_grain', function(_dt) {
     function getWater() { return _water; }
     function getCapacity() { return _capacity(); }
 
+    // Re-render hotbar/backpack so the watering-can icon charge bar updates now.
+    function _refreshSlots() {
+        if (typeof renderHotbar === 'function') renderHotbar();
+        if (typeof renderBackpack === 'function' && typeof inventoryOpen !== 'undefined' && inventoryOpen) renderBackpack();
+    }
+
     function refill() {
         _water = _capacity();
         _renderHud();
+        _refreshSlots();
     }
 
     function useOne() {
         if (_water <= 0) return false;
         _water--;
         _renderHud();
+        _refreshSlots();
         return true;
     }
 
@@ -64308,6 +65067,8 @@ registerTick('post_effects_grain', function(_dt) {
         // If still moist, refresh the timer (no penalty for over-watering, but no bonus either).
         p.waterUntilHour = nowHour + WATER_DURATION_HOURS;
         useOne();
+        if (typeof window.playBendPose === 'function') window.playBendPose();  // pour motion (no pop)
+        _playCreekClip();   // ~1s creek-sound stand-in for a watering sound
         return true;
     }
 
@@ -64323,6 +65084,8 @@ registerTick('post_effects_grain', function(_dt) {
             return false;
         }
         refill();
+        if (typeof window.playHarvestBend === 'function') window.playHarvestBend();  // kneel + pop
+        _loadCreekSound();   // warm the watering clip while we're at the creek
         if (typeof showToast === 'function') showToast('Filled watering can — ' + _water + ' charges');
         return true;
     }
@@ -64948,7 +65711,7 @@ registerTick('post_effects_grain', function(_dt) {
                 // Hunting — "for now" Ruth stocks the rifle + rounds (Bruce is the
                 // eventual proper vendor per sov_dialogue_economy_design). Rifle is a
                 // major purchase; rounds priced for ongoing economic tension.
-                { type: 'hunting_rifle',   price: 200 },
+                { type: 'hunting_rifle',   price: 10  },
                 { type: 'rifle_round',     price: 2  },
             ],
             // Most buy prices are auto-derived from sell prices via DEFAULT_BUYBACK_RATIO.
@@ -65319,6 +66082,29 @@ registerTick('post_effects_grain', function(_dt) {
         }
     }
 
+    // Render the item's real 3D model into a row's icon slot, reusing the
+    // hotbar/inventory thumbnail pipeline (getItemIcon → 128px PNG data-URL).
+    // Icons render async via WebGPU readback, so show the abbr placeholder
+    // immediately and swap the image in once it's ready.
+    function _setShopIcon(iconEl, type, def) {
+        if (!iconEl) return;
+        function _apply(url) {
+            iconEl.textContent = '';
+            var img = document.createElement('img');
+            img.src = url;
+            iconEl.appendChild(img);
+        }
+        var url = (typeof getItemIcon === 'function') ? getItemIcon(type) : null;
+        if (url) { _apply(url); return; }
+        iconEl.textContent = (def && def.abbr) || '?';   // placeholder while it renders
+        var tries = 0;
+        var iv = setInterval(function() {
+            var u = (typeof getItemIcon === 'function') ? getItemIcon(type) : null;
+            if (u) { _apply(u); clearInterval(iv); return; }
+            if (++tries > 40) clearInterval(iv);   // ~4s cap — keep the abbr
+        }, 100);
+    }
+
     function _makeBuyRow(def, type, price) {
         var row = document.createElement('div');
         row.className = 'shop-row';
@@ -65333,6 +66119,7 @@ registerTick('post_effects_grain', function(_dt) {
         btn.disabled = !canAfford;
         btn.addEventListener('click', function() { _doBuy(type, price); });
         row.appendChild(btn);
+        _setShopIcon(row.querySelector('.sr-icon'), type, def);
         return row;
     }
 
@@ -65358,6 +66145,7 @@ registerTick('post_effects_grain', function(_dt) {
             btn.addEventListener('click', function() { _doSell(item.type, price); });
         }
         row.appendChild(btn);
+        _setShopIcon(row.querySelector('.sr-icon'), item.type, def);
         return row;
     }
 
@@ -65436,6 +66224,624 @@ registerTick('post_effects_grain', function(_dt) {
         refusalLineFor: refusalLineFor,
         onFirstMeet: onFirstMeet,
     };
+})();
+
+// ═══ journal ═══════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// JOURNAL — discovery toasts + field-notes book (Phase 1)
+// ═══════════════════════════════════════════════════════════════════════
+//
+// Design authority: design/sov_field_notes_design.md ("Discovery Toasts &
+// Progressive Entries"). Entry text: design/sov_journal_content.md
+// (early-game batch v1 — practical first, IRL reference for color).
+//
+// The toast is the journal writing itself — a "new entry" slip, never a
+// game-UI item card. Tap it to open the book at that page. The journal
+// records and teaches; it NEVER assigns goals (no quest-log behavior).
+// Controls/buttons are NOT taught here (context buttons own that job).
+//
+// Triggers are poll-based (1s cadence) against existing globals — no
+// invasive edits to other systems. Exception: doSleep is wrapped for the
+// first-sleep Body entry.
+//
+// DEPENDS ON:
+//   countItem, getItemIcon          — inventory.js
+//   stamina, exhaustionState        — vitals.js
+//   placedStructures                — structure_placement.js
+//   carryState                      — trees.js / interaction
+//   MK.panel/header/sectionLabel    — ui_kit.js
+//   registerTick                    — scene_setup.js
+//   registerKeybind                 — player.js
+//   doSleep                         — sleep.js (wrapped, guarded)
+//
+// PROVIDES (window):
+//   discoverJournal(id)  — manually unlock an entry (idempotent)
+//   openJournal(id?)     — open the book, optionally at an entry
+//   JOURNAL_ENTRIES      — registry (read-only)
+//
+
+(function() {
+
+// ── STORAGE ──────────────────────────────────────────────────────
+// { seen: { id: timestampMs }, unread: { id: true } }
+// Same precedent as the hint system: own localStorage key, global
+// across save slots. (Riff point: ride SAVE_PROVIDERS per-slot later.)
+var JOURNAL_STORAGE_KEY = 'sov_journal_v1';
+var _jSeen = {};
+var _jUnread = {};
+try {
+    var _jSaved = JSON.parse(localStorage.getItem(JOURNAL_STORAGE_KEY));
+    if (_jSaved && _jSaved.seen)   _jSeen   = _jSaved.seen;
+    if (_jSaved && _jSaved.unread) _jUnread = _jSaved.unread;
+} catch (e) {}
+
+function _jSave() {
+    try {
+        localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify({ seen: _jSeen, unread: _jUnread }));
+    } catch (e) {}
+}
+
+var _jMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+// ── HELPERS for triggers ─────────────────────────────────────────
+function _jCount(type) {
+    try { return (typeof countItem === 'function') ? countItem(type) : 0; } catch (e) { return 0; }
+}
+function _jHasAny(types) {
+    for (var i = 0; i < types.length; i++) if (_jCount(types[i]) > 0) return true;
+    return false;
+}
+function _jHasStructure(id) {
+    try {
+        if (typeof placedStructures === 'undefined' || !placedStructures) return false;
+        for (var i = 0; i < placedStructures.length; i++) {
+            var s = placedStructures[i];
+            if (s && s.alive && s.structureId === id) return true;
+        }
+    } catch (e) {}
+    return false;
+}
+function _jCarrying(type) {
+    try {
+        return (typeof carryState !== 'undefined') && carryState.carrying &&
+               carryState.carrying.type === type;
+    } catch (e) { return false; }
+}
+
+// ── ENTRY REGISTRY ───────────────────────────────────────────────
+// { id, section, title, icon (ITEM_TYPES key or null), text, trigger() }
+// text — full journal page. First sentence doubles as the toast line,
+// so it must stand alone. Voice: practical first, IRL color, not flowery.
+// trigger — returns true the frame the entry should unlock. null = only
+// unlockable via discoverJournal(id) (future wiring; listed for content
+// completeness).
+var JOURNAL_SECTIONS = ['Body', 'Foraging', 'Tools', 'Fire & Camp', 'Animals', 'Materials & Building'];
+
+var JOURNAL_ENTRIES = [
+    // ── Body — mechanics taught by self-observation ──
+    {
+        id: 'body_meal', section: 'Body', title: 'A Real Meal', icon: 'forest_stew',
+        text: 'A real meal does more than fill me up — I can feel it in my legs. Snacks get me moving; a cooked meal keeps me working.',
+        trigger: function() {
+            if (typeof stamina === 'undefined' || !stamina.foodSlots) return false;
+            return !!(stamina.foodSlots[0] || stamina.foodSlots[1]);
+        }
+    },
+    {
+        id: 'body_exhausted', section: 'Body', title: 'Running Empty', icon: null,
+        text: "Pushed too hard today. Legs went heavy, everything slowed down. Out here you don't run the tank dry — work in the green, keep a margin to get home on.",
+        trigger: function() {
+            return (typeof exhaustionState !== 'undefined') && exhaustionState === 'exhausted';
+        }
+    },
+    {
+        id: 'body_sleep', section: 'Body', title: 'Sleep', icon: 'bedroll_item',
+        text: 'Slept by the fire. Better than nothing — but how I sleep is how I work tomorrow. A roof and a real bed would have me waking up with more in the tank.',
+        trigger: null  // fired by the doSleep wrap below
+    },
+    {
+        id: 'body_water', section: 'Body', title: 'Water', icon: 'water_bottle',
+        text: "Water's the quiet one. Stay drank and rest actually puts strength back. Get dry and nothing recovers right, no matter how long I sit.",
+        trigger: function() {
+            if (typeof stamina === 'undefined' || typeof stamina.hydration !== 'number') return false;
+            return stamina.hydration < 0.35;
+        }
+    },
+
+    // ── Foraging ──
+    {
+        id: 'forage_strawberry', section: 'Foraging', title: 'Wild Strawberry', icon: 'wild_strawberry',
+        text: "Wild strawberries, low in the open grass. Small but sweet — quick energy, not a meal. Same as the real thing: you'd need a hatful to call it lunch.",
+        trigger: function() { return _jCount('wild_strawberry') > 0; }
+    },
+    {
+        id: 'forage_raspberry', section: 'Foraging', title: 'Wild Raspberry', icon: 'wild_raspberry',
+        text: 'Raspberries on the brushy edges, where the ground gets some water. Pick the dark ones; the rest will be ready in a day or two.',
+        trigger: function() { return _jCount('wild_raspberry') > 0; }
+    },
+    {
+        id: 'forage_pinon', section: 'Foraging', title: 'Piñon Nuts', icon: 'pinon_nut',
+        text: 'Piñon nuts, off the little pines on the dry slopes. Dense fuel — these kept whole peoples moving through this country every fall. Worth gathering when they drop.',
+        trigger: function() { return _jCount('pinon_nut') > 0; }
+    },
+    {
+        id: 'forage_cattail', section: 'Foraging', title: 'Cattail Root', icon: 'cattail_root',
+        text: 'Cattail root from the creek edge. Starchy, like a rough potato. Old-timers called cattail the supermarket of the swamp — every part of the plant does something.',
+        trigger: function() { return _jCount('cattail_root') > 0; }
+    },
+    {
+        id: 'forage_miners_lettuce', section: 'Foraging', title: "Miner's Lettuce", icon: 'miners_lettuce',
+        text: "Miner's lettuce in the creek shade. Mild greens, grows back. The miners ate it to keep scurvy off — for me it's a free bite on every water trip.",
+        trigger: function() { return _jCount('miners_lettuce') > 0; }
+    },
+    {
+        id: 'forage_wild_onion', section: 'Foraging', title: 'Wild Onion', icon: 'wild_onion',
+        text: "Wild onion. Smells exactly like it should — that's how you know you've got the real thing. Turns anything cooked over a fire from fuel into food.",
+        trigger: function() { return _jCount('wild_onion') > 0; }
+    },
+    {
+        id: 'forage_yucca', section: 'Foraging', title: 'Yucca Fiber', icon: 'plant_fiber',
+        text: 'Yucca fiber twists up into cordage strong enough to lash a frame. People made about everything from this plant — rope, sandals, even soap from the root.',
+        trigger: function() { return _jCount('plant_fiber') > 0; }
+    },
+
+    // ── Tools ──
+    {
+        id: 'tool_hatchet', section: 'Tools', title: 'Handmade Hatchet', icon: 'hatchet',
+        text: 'This handmade hatchet will do short term — but it burns far more energy a swing than a proper axe would. A real axe carries its own weight into the cut.',
+        trigger: function() { return _jCount('hatchet') > 0; }
+    },
+    {
+        id: 'tool_knife', section: 'Tools', title: 'The Knife', icon: 'knife',
+        text: 'A knife opens the woods up — saplings, fiber, small carving work. Most of what I can make starts with a knife in my hand.',
+        trigger: function() {
+            if (_jCount('pocket_knife') > 0) return true;
+            try {
+                var t = (typeof getEquippedTool === 'function') ? getEquippedTool() : null;
+                return !!(t && t.category === 'knife');
+            } catch (e) { return false; }
+        }
+    },
+    {
+        id: 'tool_cane_pole', section: 'Tools', title: 'Cane Pole', icon: 'cane_pole',
+        text: 'A cane pole and some line. Trout hold where the water gives them cover — undercut banks, plunge pools, behind rocks. Fish the cover, not the open water.',
+        trigger: function() { return _jCount('cane_pole') > 0; }
+    },
+    {
+        id: 'tool_pickaxe', section: 'Tools', title: 'Pickaxe', icon: 'pickaxe',
+        text: 'The pickaxe bites stone. The boulders around here give up good rock if I work a face long enough — and stone is what foundations want.',
+        trigger: function() { return _jCount('pickaxe') > 0; }
+    },
+    {
+        id: 'tool_stone_axe', section: 'Tools', title: 'Stone Axe', icon: 'stone_axe',
+        text: "A stone axe cuts, slowly. It'll eat itself doing it — stone edges chip where steel keeps. Good enough to get started, not good enough to stay.",
+        trigger: function() { return _jCount('stone_axe') > 0; }
+    },
+
+    // ── Fire & Camp ──
+    {
+        id: 'camp_fire_pit', section: 'Fire & Camp', title: 'Fire Pit', icon: 'fire_pit_item',
+        text: 'The fire pit is the center of a camp — heat, cooked food, light, and somewhere to come back to. Keep it fed and it keeps me.',
+        trigger: function() { return _jCount('fire_pit_item') > 0 || _jHasStructure('fire_pit'); }
+    },
+    {
+        id: 'camp_tinder', section: 'Fire & Camp', title: 'Tinder', icon: 'tinder_bundle',
+        text: "Fire wants structure before it wants flame. Tinder first, then the small stuff, then real wood. Skip a step and you're starting over in the dark.",
+        trigger: function() { return _jCount('tinder_bundle') > 0; }
+    },
+    {
+        id: 'camp_lean_to', section: 'Fire & Camp', title: 'Lean-To', icon: 'lean_to_item',
+        text: "A lean-to knocks the wind off. It's the ground that steals the most heat though — that part's true everywhere.",
+        trigger: function() { return _jCount('lean_to_item') > 0 || _jHasStructure('lean_to'); }
+    },
+    {
+        id: 'camp_bedroll', section: 'Fire & Camp', title: 'Bedroll', icon: 'bedroll_item',
+        text: 'A bedroll between me and the ground. Cheap insurance — the dirt will pull warmth out of you all night if you let it.',
+        trigger: function() { return _jCount('bedroll_item') > 0 || _jHasStructure('bedroll'); }
+    },
+    {
+        id: 'camp_workbench', section: 'Fire & Camp', title: 'Workbench', icon: 'workbench_item',
+        text: 'With a flat bench to work on I can build proper things — frames, joints, tools. Flat and solid changes what\'s possible to make.',
+        trigger: function() { return _jCount('workbench_item') > 0 || _jHasStructure('workbench'); }
+    },
+    {
+        id: 'camp_drying_rack', section: 'Fire & Camp', title: 'Drying Rack', icon: 'drying_rack_item',
+        text: "Meat doesn't keep on its own. Dried, it lasts — and town pays for dried where they won't touch raw. First piece of a real larder.",
+        trigger: function() { return _jCount('drying_rack_item') > 0 || _jHasStructure('drying_rack'); }
+    },
+
+    // ── Animals ──
+    {
+        id: 'animal_rabbit', section: 'Animals', title: 'Rabbit', icon: 'rabbit_meat',
+        text: 'Rabbit. Dinner tonight and a hide worth keeping if I take it clean. Nothing out here wastes — neither should I.',
+        trigger: function() { return _jHasAny(['rabbit_meat', 'rabbit_hide', 'roasted_rabbit']); }
+    },
+    {
+        id: 'animal_deer', section: 'Animals', title: 'Deer', icon: 'venison',
+        text: "The deer don't wait around to confirm what they saw. They read the wind long before they see me — distance, slow movement, and stay downwind.",
+        trigger: function() { return _jCount('venison') > 0; }
+    },
+    {
+        id: 'animal_brook_trout', section: 'Animals', title: 'Brook Trout', icon: 'raw_trout',
+        text: 'Brookies in the creek. They spook at movement and shadow — stay low, drop the fly upstream, let the current bring it to them.',
+        trigger: function() { return _jCount('raw_trout') > 0; }
+    },
+    {
+        id: 'animal_chickadee', section: 'Animals', title: 'Chickadee', icon: null,
+        text: "Chickadees working the pines. They'll be here all winter — toughest little thing in these mountains.",
+        trigger: null  // needs a bird-proximity signal — wire when wildlife exposes one
+    },
+    {
+        id: 'animal_junco', section: 'Animals', title: 'Junco', icon: null,
+        text: "Juncos flushing off the ground ahead of me, gray with a white flash in the tail. Ground feeders — where they're thick, seed is too.",
+        trigger: null  // needs a bird-proximity signal — wire when wildlife exposes one
+    },
+
+    // ── Materials & Building ──
+    {
+        id: 'mat_wood_log', section: 'Materials & Building', title: 'Logs', icon: 'log_4ft',
+        text: "Logs are the currency of building out here. Length matters — an 8-footer carries and places different than a 16. Cut for the wall I'm building, not the tree I felled.",
+        trigger: function() { return _jCarrying('wood_log') || _jCount('log_4ft') > 0; }
+    },
+    {
+        id: 'mat_stone', section: 'Materials & Building', title: 'Stone', icon: 'stone',
+        text: 'Stone for foundations. Heavy is the point — a cabin is only as honest as what it sits on.',
+        trigger: function() { return _jCount('stone') > 0; }
+    },
+    {
+        id: 'mat_rope', section: 'Materials & Building', title: 'Cordage', icon: 'rope',
+        text: 'Cordage. Twist fiber against itself and it locks — that trick is older than metal. Lashings, snares, fishing line in a pinch.',
+        trigger: function() { return _jCount('rope') > 0; }
+    },
+    {
+        id: 'mat_plank', section: 'Materials & Building', title: 'Planks', icon: 'wood_plank',
+        text: 'Planks split from logs. Four of them make a roof panel at the bench. Flat wood is worked wood — it costs labor and it shows.',
+        trigger: function() { return _jCount('wood_plank') > 0; }
+    },
+];
+
+// First sentence of an entry = the toast line. Must stand alone.
+function _jToastLine(text) {
+    var i = text.indexOf('. ');
+    return (i > 0) ? text.slice(0, i + 1) : text;
+}
+
+function _jEntryById(id) {
+    for (var i = 0; i < JOURNAL_ENTRIES.length; i++) {
+        if (JOURNAL_ENTRIES[i].id === id) return JOURNAL_ENTRIES[i];
+    }
+    return null;
+}
+
+// ── BOOK-GLYPH fallback icon (entries with no item model) ────────
+var _J_BOOK_SVG = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
+
+// Attach an item icon to an <img>, retrying while the async WebGPU icon
+// pipeline warms up. Falls back to hiding the img (glyph shows instead).
+function _jAttachIcon(imgEl, glyphEl, itemType) {
+    if (!itemType || typeof getItemIcon !== 'function') {
+        imgEl.style.display = 'none';
+        glyphEl.style.display = 'flex';
+        return;
+    }
+    var tries = 0;
+    function attempt() {
+        var url = null;
+        try { url = getItemIcon(itemType); } catch (e) {}
+        if (url) {
+            imgEl.src = url;
+            imgEl.style.display = 'block';
+            glyphEl.style.display = 'none';
+            return;
+        }
+        tries++;
+        if (tries < 20) setTimeout(attempt, 500);
+        else { imgEl.style.display = 'none'; glyphEl.style.display = 'flex'; }
+    }
+    glyphEl.style.display = 'flex';
+    imgEl.style.display = 'none';
+    attempt();
+}
+
+// ── DISCOVERY TOASTS ─────────────────────────────────────────────
+
+
+
+var _jToastEls = {};        // id → card element (visible)
+var _jToastQueue = [];      // ids waiting for a visible slot
+var J_TOAST_MAX = 3;
+
+function _jToastContainer() { return document.getElementById('journalToasts'); }
+
+function _jShowToast(id) {
+    var box = _jToastContainer();
+    var entry = _jEntryById(id);
+    if (!box || !entry) return;
+    if (_jToastEls[id]) return;
+    if (Object.keys(_jToastEls).length >= J_TOAST_MAX) {
+        if (_jToastQueue.indexOf(id) === -1) _jToastQueue.push(id);
+        return;
+    }
+
+    var card = document.createElement('div');
+    card.className = 'j-toast';
+
+    var iconWrap = document.createElement('div');
+    iconWrap.className = 'j-toast__icon';
+    var glyph = document.createElement('div');
+    glyph.innerHTML = _J_BOOK_SVG;
+    glyph.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;';
+    var img = document.createElement('img');
+    img.alt = '';
+    iconWrap.appendChild(glyph);
+    iconWrap.appendChild(img);
+    _jAttachIcon(img, glyph, entry.icon);
+
+    var body = document.createElement('div');
+    body.className = 'j-toast__body';
+    var kicker = document.createElement('div');
+    kicker.className = 'j-toast__kicker';
+    kicker.textContent = entry.title;
+    var line = document.createElement('div');
+    line.className = 'j-toast__line';
+    line.textContent = _jToastLine(entry.text);
+    body.appendChild(kicker);
+    body.appendChild(line);
+
+    var x = document.createElement('div');
+    x.className = 'j-toast__x';
+    x.textContent = '✕';
+
+    card.appendChild(iconWrap);
+    card.appendChild(body);
+    card.appendChild(x);
+    box.appendChild(card);
+    _jToastEls[id] = card;
+
+    // Slide in next frame so the transition fires.
+    requestAnimationFrame(function() { card.classList.add('j-in'); });
+
+    function removeCard() {
+        card.classList.remove('j-in');
+        setTimeout(function() {
+            if (card.parentNode) card.parentNode.removeChild(card);
+            delete _jToastEls[id];
+            // Pull the next queued toast into the freed slot.
+            if (_jToastQueue.length > 0) _jShowToast(_jToastQueue.shift());
+        }, 320);
+    }
+
+    x.addEventListener('click', function(e) {
+        e.stopPropagation();
+        removeCard();   // dismiss — entry stays unread in the book
+    });
+    x.addEventListener('touchstart', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        removeCard();
+    }, { passive: false });
+
+    card.addEventListener('click', function() {
+        removeCard();
+        openJournal(id);
+    });
+    card.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: true });
+}
+
+// ── DISCOVERY API ────────────────────────────────────────────────
+
+function discoverJournal(id) {
+    if (_jSeen[id]) return;
+    var entry = _jEntryById(id);
+    if (!entry) return;
+    _jSeen[id] = Date.now();
+    _jUnread[id] = true;
+    _jSave();
+    _jShowToast(id);
+    _jUpdateBadge();
+}
+window.discoverJournal = discoverJournal;
+
+// ── TRIGGER TICK (1s cadence) ────────────────────────────────────
+var _jTickAccum = 0;
+var _jWarmup = 0;       // skip the first few seconds after boot — let
+                        // save-restore + starting gear settle so the spawn
+                        // moment isn't a toast burst.
+function _jCheck(dt) {
+    _jTickAccum += dt;
+    if (_jTickAccum < 1.0) return;
+    _jTickAccum = 0;
+    if (_jWarmup < 8) { _jWarmup++; return; }
+
+    for (var i = 0; i < JOURNAL_ENTRIES.length; i++) {
+        var e = JOURNAL_ENTRIES[i];
+        if (_jSeen[e.id] || !e.trigger) continue;
+        try {
+            if (e.trigger()) discoverJournal(e.id);
+        } catch (err) { /* a global referenced isn't loaded yet — skip */ }
+    }
+}
+if (typeof registerTick === 'function') {
+    registerTick('journal', _jCheck);
+} else if (typeof _tickCallbacks !== 'undefined') {
+    _tickCallbacks.push(_jCheck);
+}
+
+// First-sleep Body entry — wrap doSleep (declared in sleep.js, which loads
+// before this module). Guarded so a rename there degrades gracefully.
+setTimeout(function() {
+    try {
+        if (typeof doSleep === 'function' && !doSleep._journalWrapped) {
+            var _jOrigDoSleep = doSleep;
+            doSleep = function() {
+                var r = _jOrigDoSleep.apply(this, arguments);
+                try { discoverJournal('body_sleep'); } catch (e) {}
+                return r;
+            };
+            doSleep._journalWrapped = true;
+        }
+    } catch (e) {}
+}, 0);
+
+// ── THE BOOK (journal panel) ─────────────────────────────────────
+
+var _jPanel = null;
+var _jPanelBody = null;
+var _jOpen = false;
+
+function _jEnsurePanel() {
+    if (_jPanel) return;
+    _jPanel = MK.panel();
+    _jPanel.style.position = 'fixed';
+    _jPanel.style.top = '56px';
+    _jPanel.style.left = '50%';
+    _jPanel.style.transform = 'translateX(-50%)';
+    _jPanel.style.width = 'min(420px, 92vw)';
+    _jPanel.style.maxHeight = 'calc(100vh - 90px)';
+    _jPanel.style.maxHeight = 'calc(100dvh - 90px)';
+    _jPanel.style.zIndex = 'var(--sov-z-panel, 9020)';
+    _jPanel.style.display = 'none';
+    _jPanel.style.flexDirection = 'column';
+    _jPanel.style.overflow = 'hidden';
+    _jPanel.style.padding = '14px 14px 0';
+    document.body.appendChild(_jPanel);
+
+    var header = MK.header({ title: 'Field Notes', onClose: function() { closeJournal(); } });
+    _jPanel.appendChild(header);
+
+    _jPanelBody = document.createElement('div');
+    _jPanelBody.className = 'mk-scroll';
+    _jPanelBody.style.cssText = 'flex:1; overflow-y:auto; padding:4px 0 14px; touch-action:pan-y;';
+    _jPanel.appendChild(_jPanelBody);
+
+    _jPanel.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
+    _jPanel.addEventListener('touchmove',  function(e) { e.stopPropagation(); }, { passive: false });
+}
+
+function _jBuildList(focusId) {
+    _jPanelBody.innerHTML = '';
+
+    var any = false;
+    for (var si = 0; si < JOURNAL_SECTIONS.length; si++) {
+        var section = JOURNAL_SECTIONS[si];
+        var rows = [];
+        for (var i = 0; i < JOURNAL_ENTRIES.length; i++) {
+            var e = JOURNAL_ENTRIES[i];
+            if (e.section !== section || !_jSeen[e.id]) continue;
+            rows.push(e);
+        }
+        if (rows.length === 0) continue;
+        any = true;
+
+        // Oldest discovery first within a section — the notes accumulate
+        // the way a real notebook would.
+        rows.sort(function(a, b) { return (_jSeen[a.id] || 0) - (_jSeen[b.id] || 0); });
+
+        _jPanelBody.appendChild(MK.sectionLabel(section));
+        for (var ri = 0; ri < rows.length; ri++) {
+            var entry = rows[ri];
+            var row = document.createElement('div');
+            row.className = 'j-entry' + (_jUnread[entry.id] ? ' j-entry--unread' : '');
+            row.setAttribute('data-journal-id', entry.id);
+
+            var head = document.createElement('div');
+            head.className = 'j-entry__head';
+            var iconWrap = document.createElement('div');
+            iconWrap.className = 'j-entry__icon';
+            var glyph = document.createElement('div');
+            glyph.innerHTML = _J_BOOK_SVG;
+            glyph.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;';
+            var img = document.createElement('img');
+            img.alt = '';
+            iconWrap.appendChild(glyph);
+            iconWrap.appendChild(img);
+            _jAttachIcon(img, glyph, entry.icon);
+            var title = document.createElement('div');
+            title.className = 'j-entry__title';
+            title.textContent = entry.title;
+            head.appendChild(iconWrap);
+            head.appendChild(title);
+
+            var text = document.createElement('div');
+            text.className = 'j-entry__text';
+            text.textContent = entry.text;
+
+            row.appendChild(head);
+            row.appendChild(text);
+            _jPanelBody.appendChild(row);
+        }
+    }
+
+    if (!any) {
+        var empty = document.createElement('div');
+        empty.className = 'j-empty';
+        empty.textContent = "nothing written down yet. it'll come.";
+        _jPanelBody.appendChild(empty);
+    }
+
+    if (focusId) {
+        var target = _jPanelBody.querySelector('[data-journal-id="' + focusId + '"]');
+        if (target) {
+            target.classList.add('j-entry--flash');
+            setTimeout(function() { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 50);
+        }
+    }
+}
+
+function openJournal(focusId) {
+    _jEnsurePanel();
+    _jOpen = true;
+    _jBuildList(focusId);
+    _jPanel.style.display = 'flex';
+    // Opening the book reads it — clear unread.
+    var changed = false;
+    for (var id in _jUnread) { delete _jUnread[id]; changed = true; }
+    if (changed) _jSave();
+    _jUpdateBadge();
+}
+function closeJournal() {
+    _jOpen = false;
+    if (_jPanel) _jPanel.style.display = 'none';
+}
+window.openJournal = openJournal;
+window.closeJournal = closeJournal;
+
+// ── BOOK BUTTON (top-left puck cluster, right of ?) ──────────────
+(function() {
+    var btn = document.createElement('div');
+    btn.id = 'journalBtn';
+    btn.className = 'mk-puck mk-puck--neutral';
+    btn.innerHTML = _J_BOOK_SVG + '<div class="j-badge"></div>';
+    document.body.appendChild(btn);
+
+    btn.addEventListener('touchstart', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        if (_jOpen) closeJournal(); else openJournal();
+    });
+    btn.addEventListener('click', function() {
+        if (_jOpen) closeJournal(); else openJournal();
+    });
+
+    if (typeof registerKeybind === 'function') {
+        registerKeybind('any', 'j', function() {
+            if (_jOpen) closeJournal(); else openJournal();
+        });
+    }
+})();
+
+function _jUpdateBadge() {
+    var btn = document.getElementById('journalBtn');
+    if (!btn) return;
+    var has = false;
+    for (var k in _jUnread) { has = true; break; }
+    btn.classList.toggle('j-has-unread', has);
+}
+_jUpdateBadge();
+
+window.JOURNAL_ENTRIES = JOURNAL_ENTRIES;
+
+console.log('[journal] Field notes active — ' + JOURNAL_ENTRIES.length + ' entries registered, ' +
+            Object.keys(_jSeen).length + ' discovered');
+
 })();
 
 // ═══ game_loop ═════════════════════════════════════════
