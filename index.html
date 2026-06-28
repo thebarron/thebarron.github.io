@@ -15321,6 +15321,10 @@ let inVehicle = false;
 let vehicleMesh = null;
 let vehicleRegObj = null;
 const vehiclePos = new THREE.Vector3(-142, 0, -50);
+// Where the truck spawns. Defaults to its fixed lot; _spawnVehicle() overrides
+// these with the player's position so the dev "Car" button drops it at the player.
+let _truckSpawnX = -142;
+let _truckSpawnZ = -50;
 let vehicleYaw = 0.15;
 let vehicleSpeed = 0;
 let vehicleCamYaw = 0.15;    // Lags behind vehicleYaw for cinematic trail
@@ -15523,8 +15527,8 @@ function roundedBox(w, h, d, r, mat, segs) {
 let vehicleWheelMeshes = [];
 
 function _createVehicleModel() {
-    const truckH = getH(-142, -50);
-    vehiclePos.set(-142, truckH + V_RIDE_H, -50);
+    const truckH = getH(_truckSpawnX, _truckSpawnZ);
+    vehiclePos.set(_truckSpawnX, truckH + V_RIDE_H, _truckSpawnZ);
 
     const carGroup = new THREE.Group();
     carGroup.position.copy(vehiclePos);
@@ -15714,13 +15718,38 @@ function exitVehicle() {
 // or the "Truck" toggle in the FPS Profiling section of the tuning panel.
 
 function _attachVehicleCollision() {
-    if (vehicleRegObj || typeof regBox !== 'function') return;
-    vehicleRegObj = regBox(-142, -50, 1.4, 2.5, 'vehicle');
+    if (typeof regBox !== 'function') return;
+    // Drop any prior box so the truck can re-register at a new spawn point.
+    _removeVehicleCollision();
+    vehicleRegObj = regBox(_truckSpawnX, _truckSpawnZ, 1.4, 2.5, 'vehicle');
     vehicleRegObj.onInspect = { label: 'Enter Truck', action: enterVehicle };
+}
+
+// Fully unregister the truck's collider — mark dead, pull from the spatial grid
+// and the worldObjects array — so respawns relocate cleanly instead of leaving
+// a phantom box at the old lot.
+function _removeVehicleCollision() {
+    if (!vehicleRegObj) return;
+    vehicleRegObj.alive = false;
+    vehicleRegObj.onInspect = null;
+    if (typeof worldObjectGrid !== 'undefined' && worldObjectGrid.remove) worldObjectGrid.remove(vehicleRegObj);
+    if (typeof worldObjects !== 'undefined') {
+        var _wi = worldObjects.indexOf(vehicleRegObj);
+        if (_wi !== -1) worldObjects.splice(_wi, 1);
+    }
+    vehicleRegObj = null;
 }
 
 window._spawnVehicle = function() {
     if (vehicleMesh) return;  // already spawned
+    // Dev convenience: drop the truck ~5m in front of the player, facing the
+    // same heading. Falls back to the fixed lot if the player isn't ready yet.
+    if (typeof playerPos !== 'undefined' && playerPos) {
+        var _yaw = (typeof playerYaw === 'number') ? playerYaw : vehicleYaw;
+        _truckSpawnX = playerPos.x + Math.sin(_yaw) * 5.0;
+        _truckSpawnZ = playerPos.z + Math.cos(_yaw) * 5.0;
+        vehicleYaw = _yaw;
+    }
     _createVehicleModel();
     _attachVehicleCollision();
     window._vehicleSpawned = true;
@@ -15740,9 +15769,7 @@ window._despawnVehicle = function() {
     }
     vehicleWheelMeshes.length = 0;
     vehicleMesh = null;
-    // Collision object stays registered but with no onInspect — leaving it
-    // out of regBox's internal unregister complexity for now.
-    if (vehicleRegObj) vehicleRegObj.onInspect = null;
+    _removeVehicleCollision();
     window._vehicleSpawned = false;
 };
 
