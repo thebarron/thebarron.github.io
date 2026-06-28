@@ -6454,6 +6454,12 @@ const verts = terrainGeo.attributes.position.array;
 // References feature arrays from terrain_data.js (loaded BEFORE this module).
 // ─────────────────────────────────────────────
 function calcHeight(x, z) {
+    // ── TEST-TERRAIN OVERRIDE (cliff_test sandbox; consistent with __EDITOR_MODE__) ──
+    // When a test harness installs a height fn before this module loads, the whole
+    // terrain mesh (and therefore getH collision) is driven by it. Never set in normal play.
+    if (typeof window !== 'undefined' && window.__TEST_TERRAIN_H__) {
+        return window.__TEST_TERRAIN_H__(x, z);
+    }
     // ── 1. Base terrain — constant rolling hills everywhere ──
     // Four octave layers at different scales so the ground NEVER feels flat
     let h = fbm(x * 0.004, z * 0.004, 7) * 30;            // broad landscape shape
@@ -11201,7 +11207,7 @@ if (GRASS_ENABLED) {
 
 // ── Tuning ──
 var _sgTuning = {
-    enabled:      true,
+    enabled:      false,       // DISABLED — replaced by grass_field_game.js (follow field). Kept for A/B; flip true in tuning panel to compare.
     count:        100000,      // total instance count
     clusterCount: 80000,       // placement attempts (more attempts = better coverage)
     clusterSize:  8,           // blades per cluster
@@ -11585,6 +11591,862 @@ if (typeof registerTick === 'function') {
 
 // Expose respawn for tuning panel
 window._simpleGrassRespawn = _spawnSimpleGrass;
+
+// ═══ grass_field ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// GRASS FIELD — curved tapered gradient blades + 3-layer wind (TSL)
+// ═══════════════════════════════════════════════════════════════════════
+//
+// The "looks great and full" grass. Single source of truth for the LOOK,
+// consumed by BOTH the grass bench (/grass_bench) and the game. Dial it in
+// the bench → Save to Repo / Copy Values → bake into GRASS_PARAMS defaults.
+//
+// Why this exists (see design/sov_grass_design.md):
+//   The old simple_grass.js used 3 flat 0.8m-wide triangle shards per clump
+//   with a single flat color and no LOD — it read as a sparse plastic carpet.
+//   The convergent technique across BOTW / Ghost of Tsushima / Over the Hill:
+//     - curved tapered blades (Bezier-ish bend, multiple segments → fine tip)
+//     - base→tip color GRADIENT + ambient occlusion darkening at the root
+//     - multi-layer wind: global sway + rolling gust FRONT + per-blade flutter
+//     - BotW flat-ground lighting (all normals up) so thin blades don't
+//       flicker bright-front/dark-back
+//   Camera-relative placement (dense near the player, terrain tinted to carry
+//   the color into the distance) is the GAME integration step — the bench lays
+//   a fixed dense patch so we can judge form/color/motion in isolation first.
+//
+// SELF-CONTAINED: own value-noise + RNG, no dependency on terrain.js. That's
+// what lets the bench target stay tiny (no terrain/atmosphere stack).
+//
+// DEPENDS ON: THREE (three.webgpu.global.js) only.
+//
+// PROVIDES (window):
+//   GRASS_PARAMS            — slider schema {key:{value,min,max,step,group,live}}
+//   grassParamValues(schema)— flat {key:value} snapshot (bench live state)
+//   buildGrassField(params, opts) → { mesh, count, dispose }
+//   grassApplyDynamic(params)— push wind+color params into live uniforms (no rebuild)
+//   grassTickWind(dt, wind, player) — per-frame uniform advance
+// ═══════════════════════════════════════════════════════════════════════
+
+var _T = THREE.TSL;
+
+// ── Param schema (drives bench sliders). `live:true` = update a uniform with
+//    no rebuild; otherwise a slider change rebuilds the field geometry. ──
+var GRASS_PARAMS = {
+    // — Blade form (rebuild) —
+    bladeH:         { value: 0.62,  min: 0.10, max: 2.00, step: 0.01, group: 'Blade' },
+    bladeHVar:      { value: 0.30,  min: 0.00, max: 1.00, step: 0.01, group: 'Blade' },
+    bladeW:         { value: 0.050, min: 0.01, max: 0.18, step: 0.002, group: 'Blade' },
+    segments:       { value: 4,     min: 2,    max: 6,    step: 1,    group: 'Blade' },
+    bladesPerClump: { value: 6,     min: 1,    max: 10,   step: 1,    group: 'Blade' },
+    bend:           { value: 0.08,  min: 0.00, max: 1.20, step: 0.01, group: 'Blade' },
+    clumpSpread:    { value: 0.16,  min: 0.00, max: 0.50, step: 0.01, group: 'Blade' },
+    // — Density / placement (rebuild) —
+    spacing:        { value: 0.42,  min: 0.20, max: 1.20, step: 0.02, group: 'Density' },
+    patchiness:     { value: 0.35,  min: 0.00, max: 0.90, step: 0.02, group: 'Density' },
+    scaleVar:       { value: 0.30,  min: 0.00, max: 0.80, step: 0.02, group: 'Density' },
+    colorJitter:    { value: 0.16,  min: 0.00, max: 0.50, step: 0.01, group: 'Density' },
+    // — Color (live) —
+    baseR:          { value: 0.085, min: 0.00, max: 1.00, step: 0.005, group: 'Color', live: true },
+    baseG:          { value: 0.130, min: 0.00, max: 1.00, step: 0.005, group: 'Color', live: true },
+    baseB:          { value: 0.030, min: 0.00, max: 1.00, step: 0.005, group: 'Color', live: true },
+    tipR:           { value: 0.340, min: 0.00, max: 1.00, step: 0.005, group: 'Color', live: true },
+    tipG:           { value: 0.400, min: 0.00, max: 1.00, step: 0.005, group: 'Color', live: true },
+    tipB:           { value: 0.090, min: 0.00, max: 1.00, step: 0.005, group: 'Color', live: true },
+    rootDark:       { value: 0.45,  min: 0.10, max: 1.00, step: 0.01, group: 'Color', live: true },
+    brightness:     { value: 3.20,  min: 0.50, max: 6.00, step: 0.05, group: 'Color', live: true },
+    // — Wind (live) — DIRECTIONAL: grass leans downwind so the player can read wind dir (hunting) —
+    windDir:        { value: 40,    min: 0,    max: 360,  step: 1,    group: 'Wind', live: true },
+    windBias:       { value: 0.16,  min: 0.00, max: 0.50, step: 0.005, group: 'Wind', live: true },
+    gustStr:        { value: 0.58,  min: 0.00, max: 0.80, step: 0.005, group: 'Wind', live: true },
+    gustScale:      { value: 0.100, min: 0.010,max: 0.35, step: 0.010, group: 'Wind', live: true },
+    gustSpeed:      { value: 0.90,  min: 0.05, max: 2.00, step: 0.05, group: 'Wind', live: true },
+    gustSharp:      { value: 2.20,  min: 1.00, max: 5.00, step: 0.10, group: 'Wind', live: true },
+    windRipple:     { value: 0.30,  min: 0.00, max: 0.50, step: 0.01, group: 'Wind', live: true },
+    flutterStr:     { value: 0.020, min: 0.00, max: 0.10, step: 0.002, group: 'Wind', live: true },
+    flutterSpeed:   { value: 3.00,  min: 0.50, max: 8.00, step: 0.10, group: 'Wind', live: true },
+    pushRadius:     { value: 2.00,  min: 0.50, max: 6.00, step: 0.10, group: 'Wind', live: true },
+    pushStrength:   { value: 0.60,  min: 0.00, max: 2.00, step: 0.05, group: 'Wind', live: true },
+};
+window.GRASS_PARAMS = GRASS_PARAMS;
+
+function grassParamValues(schema) {
+    var out = {};
+    for (var k in schema) out[k] = schema[k].value;
+    return out;
+}
+window.grassParamValues = grassParamValues;
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// Self-contained noise + RNG (no terrain.js dependency)
+// ═══════════════════════════════════════════════════════════════════════
+var _gfSeed = 1337;
+function _gfRand() {
+    _gfSeed = (_gfSeed * 16807 + 0) % 2147483647;
+    return (_gfSeed - 1) / 2147483646;
+}
+function _gfHash(ix, iz) {
+    var h = (ix * 374761393 + iz * 668265263) & 0x7fffffff;
+    h = (h ^ (h >> 13)) * 1274126177 & 0x7fffffff;
+    return (h & 0xffff) / 65535;
+}
+function _gfNoise(x, z) {
+    var x0 = Math.floor(x), z0 = Math.floor(z);
+    var fx = x - x0, fz = z - z0;
+    var sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz);
+    var a = _gfHash(x0, z0),     b = _gfHash(x0 + 1, z0);
+    var c = _gfHash(x0, z0 + 1), d = _gfHash(x0 + 1, z0 + 1);
+    return (a + (b - a) * sx) * (1 - sz) + (c + (d - c) * sx) * sz;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// Live uniforms (shared by every field material; updated by sliders + tick)
+// ═══════════════════════════════════════════════════════════════════════
+var _gfTime         = _T.uniform(0.0);
+var _gfWindDirX     = _T.uniform(0.77);
+var _gfWindDirZ     = _T.uniform(0.64);
+var _gfWindBias     = _T.uniform(GRASS_PARAMS.windBias.value);
+var _gfGustSharp    = _T.uniform(GRASS_PARAMS.gustSharp.value);
+var _gfGustView     = _T.uniform(0.0);   // debug: 0 = normal color, 1 = gust heatmap
+var _gfFieldCx      = _T.uniform(0.0);    // camera-relative field centre (player XZ)
+var _gfFieldCz      = _T.uniform(0.0);
+var _gfFieldR       = _T.uniform(99999.0); // huge = no edge fade (static/debug modes)
+var _gfWindRipple   = _T.uniform(GRASS_PARAMS.windRipple.value);
+var _gfGustStr      = _T.uniform(GRASS_PARAMS.gustStr.value);
+var _gfGustScale    = _T.uniform(GRASS_PARAMS.gustScale.value);
+var _gfGustSpeed    = _T.uniform(GRASS_PARAMS.gustSpeed.value);
+var _gfFlutterStr   = _T.uniform(GRASS_PARAMS.flutterStr.value);
+var _gfFlutterSpeed = _T.uniform(GRASS_PARAMS.flutterSpeed.value);
+var _gfPlayerX      = _T.uniform(99999.0);
+var _gfPlayerZ      = _T.uniform(99999.0);
+var _gfPushRad      = _T.uniform(GRASS_PARAMS.pushRadius.value);
+var _gfPushStr      = _T.uniform(GRASS_PARAMS.pushStrength.value);
+var _gfBaseCol      = _T.uniform(new THREE.Vector3(GRASS_PARAMS.baseR.value, GRASS_PARAMS.baseG.value, GRASS_PARAMS.baseB.value));
+var _gfTipCol       = _T.uniform(new THREE.Vector3(GRASS_PARAMS.tipR.value, GRASS_PARAMS.tipG.value, GRASS_PARAMS.tipB.value));
+var _gfRootDark     = _T.uniform(GRASS_PARAMS.rootDark.value);
+var _gfBrightness   = _T.uniform(GRASS_PARAMS.brightness.value);
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// GEOMETRY — clump of curved tapered blades (uv.y = height fraction t∈[0,1])
+// ═══════════════════════════════════════════════════════════════════════
+function _gfBuildClumpGeo(p) {
+    var segs = Math.max(2, Math.round(p.segments));
+    var nb   = Math.max(1, Math.round(p.bladesPerClump));
+    var verts = [], norms = [], uvs = [], idx = [];
+
+    for (var b = 0; b < nb; b++) {
+        var ringStart = verts.length / 3;
+        var yaw  = _gfRand() * Math.PI * 2;               // blade plane facing
+        var cy = Math.cos(yaw), sy = Math.sin(yaw);
+        // Rest curl is SMALL and in the blade's OWN plane (a natural forward arch),
+        // NOT a big random horizontal lean. A large random rest arc was the real
+        // "criss-cross" culprit — it permanently fanned blades every direction and
+        // buried the wind. All DIRECTIONAL lean now comes from the wind, not geometry.
+        var fdx = sy, fdz = -cy;                          // forward = perpendicular to width axis
+        var curl = p.bend * (0.6 + _gfRand() * 0.6);      // gentle forward arch
+        var h    = p.bladeH * (1 + (_gfRand() - 0.5) * 2 * p.bladeHVar);
+        var w    = p.bladeW * (0.8 + _gfRand() * 0.4);
+        var ox   = (_gfRand() - 0.5) * 2 * p.clumpSpread; // clump scatter
+        var oz   = (_gfRand() - 0.5) * 2 * p.clumpSpread;
+
+        for (var s = 0; s <= segs; s++) {
+            var t = s / segs;
+            var yy = h * t;
+            var bendOff = curl * t * t;                   // gentle forward arch
+            var cx = ox + fdx * bendOff;
+            var cz = oz + fdz * bendOff;
+            if (s < segs) {
+                var ww = w * (1 - t * 0.92);              // taper toward tip
+                verts.push(cx - cy * ww, yy, cz - sy * ww); norms.push(0, 1, 0); uvs.push(0, t);
+                verts.push(cx + cy * ww, yy, cz + sy * ww); norms.push(0, 1, 0); uvs.push(1, t);
+            } else {
+                verts.push(cx, yy, cz); norms.push(0, 1, 0); uvs.push(0.5, 1); // tip point
+            }
+        }
+        for (var s = 0; s < segs; s++) {
+            var a0 = ringStart + s * 2, a1 = a0 + 1;
+            if (s + 1 < segs) {
+                var b0 = ringStart + (s + 1) * 2, b1 = b0 + 1;
+                idx.push(a0, b0, b1, a0, b1, a1);
+            } else {
+                var tip = ringStart + segs * 2;
+                idx.push(a0, tip, a1);
+            }
+        }
+    }
+
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    geo.setAttribute('normal',   new THREE.Float32BufferAttribute(norms, 3));
+    geo.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(idx);
+    return geo;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// MATERIAL — TSL: flat-up lighting + gradient/AO color + 3-layer wind
+// ═══════════════════════════════════════════════════════════════════════
+function _gfMakeMaterial(jitterArr, clumpXZArr, tintArr) {
+    var T = THREE.TSL;
+    var mat = new THREE.MeshLambertNodeMaterial({ side: THREE.DoubleSide });
+
+    // BotW technique: light grass as a continuous ground surface (normals up).
+    mat.normalNode = T.vec3(0, 1, 0);
+
+    // ── Wind displacement (vertex) — DIRECTIONAL: grass leans downwind ──
+    // The bend is biased ALONG the wind vector (never upwind) so a rolling gust
+    // reads as a coherent front moving in the wind direction — the player can
+    // read wind direction off the grass itself (hunting). A symmetric sine
+    // (the old code) swung blades both ways at once → criss-cross, no direction.
+    //
+    // CLUMP WORLD XZ via a per-instance attribute — NOT positionWorld. In the
+    // VERTEX stage on this r183 WebGPU build, positionWorld lacks the instance
+    // offset (the instance matrix is applied to positionNode's OUTPUT), so it
+    // reads ~local and breaks every world-space term (gust noise, push, fade)
+    // away from origin. A vec2 instanced attribute reads correctly here (verified
+    // — does NOT tear like the old per-clump rotation attribute did). The follow
+    // field updates this attribute whenever a clump wraps. Gust/push are now
+    // per-CLUMP (constant across a clump's blades) — fine, clumps are ~0.4m.
+    var cxz  = T.instancedBufferAttribute(clumpXZArr, 'vec2', 2, 0);
+    var tV   = T.uv().y;                        // 0 root → 1 tip
+    // Whole blade leans (so direction reads), curving more toward the tip.
+    var hMask = tV.mul(tV).mul(0.5).add(tV.mul(0.5));
+
+    // ── Rolling gusts: traveling waves SHARPENED into pulses that "push & relent" ──
+    // Two waves travel along the wind direction at different wavelength + speed, so
+    // gusts beat in and out instead of ticking like a metronome. Raising the 0..1
+    // wave to a power (gustSharp) makes the field sit RELAXED most of the time,
+    // then a band of hard bend sweeps through and releases — the rolling-wind feel.
+    // Gust field = a scrolling 2D NOISE (Ghost-of-Tsushima style), NOT a 1D plane
+    // wave — so gusts are PATCHY cells that drift downwind, breaking the
+    // move-in-unison look (some blades slammed while neighbours stand). Anisotropic:
+    // higher frequency ALONG the wind (you see waves roll past a point) + lower
+    // ACROSS it (elongated, broken fronts, not infinite straight bands). Sharpened
+    // into pulses. Bend DIRECTION stays locked to the wind — only the amount is
+    // patchy — so it still reads for hunting.
+    var alongW = cxz.x.mul(_gfWindDirX).add(cxz.y.mul(_gfWindDirZ));
+    var crossW = cxz.x.mul(_gfWindDirZ).sub(cxz.y.mul(_gfWindDirX));
+    var scroll = _gfTime.mul(_gfGustSpeed);
+    var nA = alongW.mul(_gfGustScale).sub(scroll);
+    var nC = crossW.mul(_gfGustScale.mul(0.5));
+    var gust = T.mx_noise_float(T.vec3(nA, nC, T.float(0.0))).mul(0.5).add(0.5).pow(_gfGustSharp);  // 0..1 patchy pulse
+    // Downwind lean = gentle resting bias + the gust pulse (both ≥ 0 → never upwind).
+    var lean  = _gfWindBias.add(gust.mul(_gfGustStr));
+    // Small symmetric flutter for life — kept well under the lean so it can't criss-cross.
+    var flutter   = T.sin(_gfTime.mul(_gfFlutterSpeed).add(cxz.x.mul(0.8)).add(cxz.y.mul(1.0))).mul(_gfFlutterStr);
+
+    var amount = lean.add(flutter).mul(hMask);
+
+    // ── Player push-aside (direction away from the player, per-clump) ──
+    var toPX = cxz.x.sub(_gfPlayerX);
+    var toPZ = cxz.y.sub(_gfPlayerZ);
+    var dist = T.sqrt(toPX.mul(toPX).add(toPZ.mul(toPZ)));
+    var push = T.float(1.0).sub(T.smoothstep(T.float(0.0), _gfPushRad, dist)).mul(_gfPushStr).mul(hMask);
+    var safe = T.max(dist, T.float(0.01));
+
+    // Total WORLD-space horizontal displacement (wind + push), composed immutably.
+    var worldDX = _gfWindDirX.mul(amount).add(toPX.div(safe).mul(push));
+    var worldDZ = _gfWindDirZ.mul(amount).add(toPZ.div(safe).mul(push));
+
+    // ── Per-clump rotation, done IN-SHADER from the instance index ──
+    // Each clump gets a unique Y-rotation hashed from its instanceIndex — a SAFE
+    // built-in GPU input, NOT instancedBufferAttribute (which tears the mesh in
+    // positionNode here). Rotate the canonical blade by that angle, THEN add the
+    // world-space wind on top. Because the wind is added AFTER the rotation (and
+    // the instance matrix itself carries no rotation), the wind stays in world
+    // space: every clump faces a different way, but ALL bend in the same true
+    // wind direction. Orientation and wind are decoupled — exactly the goal.
+    var hAng = T.float(T.instanceIndex).mul(12.9898).sin().mul(43758.5453).fract().mul(6.2831853);
+    var ca = T.cos(hAng), sa = T.sin(hAng);
+    var pl = T.positionLocal;
+    var rotX = pl.x.mul(ca).add(pl.z.mul(sa));        // standard Y-rotation of the canonical blade
+    var rotZ = pl.z.mul(ca).sub(pl.x.mul(sa));
+    var rotated = T.vec3(rotX, pl.y, rotZ);
+
+    // ── Edge fade (camera-relative field) — geometric shrink in the VERTEX stage ──
+    // Shrink the blade to nothing over the last ~20% of the field radius so clumps
+    // WRAP in/out at the edge already at zero size — the recycle never pops. Uses
+    // the clump world-XZ attribute (cxz), which IS correct in the vertex stage
+    // (positionWorld is not here — see the cxz note above). Square (Chebyshev) fade
+    // matches the square field. No-op in static/debug modes (_gfFieldR huge → 1).
+    var cheb = T.max(cxz.x.sub(_gfFieldCx).abs(), cxz.y.sub(_gfFieldCz).abs());
+    var fade = T.float(1.0).sub(T.smoothstep(_gfFieldR.mul(0.78), _gfFieldR.mul(0.98), cheb));
+
+    mat.positionNode = rotated.mul(fade).add(T.vec3(worldDX.mul(fade), 0, worldDZ.mul(fade)));
+
+    // ── Color (fragment): base→tip gradient, root AO, per-clump jitter ──
+    var tC = T.uv().y;
+    var grad = T.mix(_gfBaseCol, _gfTipCol, tC);
+    var rootShade = T.mix(_gfRootDark, T.float(1.0), T.smoothstep(T.float(0.0), T.float(0.35), tC));
+    var jitter = T.instancedBufferAttribute(jitterArr, 'float', 1, 0);
+    // Per-CLUMP biome tint (vec3 multiplier on the global gradient) — the per-biome
+    // color refinement. Read in the FRAGMENT stage (safe). Defaults to white (1,1,1)
+    // for callers that don't supply biome colors (the bench), so it's a no-op there.
+    var biomeTint = T.instancedBufferAttribute(tintArr, 'vec3', 3, 0);
+    // Wind ripple: the rolling gust shows as a moving shade band traveling in the
+    // wind direction (the wheat-field read). Normals are forced up, so a tilting
+    // blade gives NO lighting cue — this color modulation IS the directional motion
+    // cue that makes the gust legible (reuses gustWave/gustEnv from the wind block).
+    var ripple = T.float(1.0).sub(gust.mul(_gfWindRipple));
+    var normalColor = grad.mul(rootShade).mul(jitter).mul(_gfBrightness).mul(ripple).mul(biomeTint);
+    // DEBUG gust heatmap — recolor each blade by how hard it's being gusted RIGHT
+    // NOW (deep blue = relaxed, hot yellow = strongest push), using the SAME gust
+    // value that drives the bend. Toggled via grassSetGustView(); lets you see the
+    // gust cells drift through and confirm the grass bends where the heat is.
+    var gustHeat = T.mix(T.vec3(0.02, 0.05, 0.28), T.vec3(1.0, 0.92, 0.18), gust);
+    mat.colorNode = T.mix(normalColor, gustHeat, _gfGustView);
+
+    return mat;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// BUILD — flat dense patch for the bench. opts: {extent, spacing}
+// (Game integration swaps this placement for terrain-aware camera-relative.)
+// ═══════════════════════════════════════════════════════════════════════
+function buildGrassField(params, opts) {
+    opts = opts || {};
+    var p = params;
+    _gfSeed = 20260625;
+
+    var geo = _gfBuildClumpGeo(p);
+
+    var place = [];   // x, z, rotY, scale, jitter
+    if (opts.layout === 'grid') {
+        // ── ISOLATE/DEBUG layout: a sparse grid of big clumps so each blade's
+        //    behavior is clearly visible. No patchiness, uniform big scale. ──
+        var gn   = opts.gridN || 7;
+        var gsp  = opts.gridSpacing || 4.0;
+        var smul = opts.scaleMul || 2.5;
+        var half = (gn - 1) / 2;
+        for (var ix = 0; ix < gn; ix++) {
+            for (var iz = 0; iz < gn; iz++) {
+                place.push((ix - half) * gsp, (iz - half) * gsp, _gfRand() * Math.PI * 2, smul, 1.0);
+            }
+        }
+    } else {
+        var extent  = opts.extent  != null ? opts.extent  : 24;
+        var spacing = opts.spacing != null ? opts.spacing : p.spacing;
+        for (var gx = -extent; gx <= extent; gx += spacing) {
+            for (var gz = -extent; gz <= extent; gz += spacing) {
+                var jx = gx + (_gfRand() - 0.5) * spacing * 0.95;
+                var jz = gz + (_gfRand() - 0.5) * spacing * 0.95;
+                // patchy density — fbm-ish thinning so it doesn't read as a solid grid
+                var d = _gfNoise(jx * 0.10 + 11.3, jz * 0.10 + 5.7);
+                if (_gfRand() > (1 - p.patchiness) + d * p.patchiness) continue;
+                var rotY = _gfRand() * Math.PI * 2;
+                var sc   = 1 + (_gfRand() - 0.5) * 2 * p.scaleVar;
+                sc = Math.max(0.25, sc);
+                var jit  = (1 - p.colorJitter) + _gfRand() * p.colorJitter * 2;
+                place.push(jx, jz, rotY, sc, jit);
+            }
+        }
+    }
+
+    var n = place.length / 5;
+    var jitterArr = new Float32Array(Math.max(1, n));
+    var clumpXZArr = new Float32Array(Math.max(1, n) * 2);                 // per-clump world XZ (vertex-safe wind/fade input)
+    var cxzAttr = new THREE.InstancedBufferAttribute(clumpXZArr, 2);
+    var tintArr = new Float32Array(Math.max(1, n) * 3).fill(1);            // per-clump biome tint — white (no-op) for the static/bench field
+    var tintAttr = new THREE.InstancedBufferAttribute(tintArr, 3);
+    var mat = _gfMakeMaterial(jitterArr, cxzAttr, tintAttr);
+    var mesh = new THREE.InstancedMesh(geo, mat, Math.max(1, n));
+    mesh.frustumCulled = false;
+
+    var dummy = new THREE.Object3D();
+    for (var i = 0; i < n; i++) {
+        var base = i * 5;
+        dummy.position.set(place[base], 0, place[base + 1]);
+        dummy.rotation.set(0, 0, 0);   // rotation is handled IN-SHADER (hashed from instanceIndex); instance matrix stays rotation-free so world wind stays correct
+        var s = place[base + 3];
+        dummy.scale.set(s, s, s);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+        jitterArr[i] = place[base + 4];
+        clumpXZArr[i * 2] = place[base]; clumpXZArr[i * 2 + 1] = place[base + 1];
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+
+    grassApplyDynamic(p);  // sync color/wind uniforms to current params
+    _gfFieldR.value = 99999;  // static field: no camera-relative edge fade
+
+    return {
+        mesh: mesh,
+        count: n,
+        dispose: function () { geo.dispose(); }
+    };
+}
+window.buildGrassField = buildGrassField;
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// FOLLOW FIELD — camera-relative, world-anchored clumps that follow the player
+// ═══════════════════════════════════════════════════════════════════════
+// A fixed pool of `count` clumps lives in a SQUARE of side 2R centred on the
+// player. Each clump has a fixed WORLD position (you walk past it). When the
+// player moves and a clump falls outside the square (behind), it WRAPS to the
+// opposite edge (ahead) at a new world position, re-sampled via opts.sample().
+// This concentrates the whole budget in view → ~30-100× denser than static
+// whole-map scatter for the same instance count. Replaces simple_grass.js's
+// static scatter in-game; the bench drives it on flat ground to prove the
+// mechanic. Wrapping happens at the field edge (hidden by edge-fade in 1b).
+//
+// opts: { radius=50, count=40000, cx=0, cz=0,
+//         sample(x,z) -> { h, valid, scaleMul } }   // terrain query; bench = flat
+//
+// Returns: { mesh, radius, count, recenter(px,pz), dispose() }
+function buildGrassFieldFollow(params, opts) {
+    opts = opts || {};
+    var R = opts.radius != null ? opts.radius : 50;
+    var count = Math.max(1, opts.count != null ? opts.count : 40000);
+    var sample = opts.sample || function () { return { h: 0, valid: true, scaleMul: 1 }; };
+    var cx = opts.cx || 0, cz = opts.cz || 0;
+    _gfSeed = 20260625;
+
+    var geo = _gfBuildClumpGeo(params);
+    var jitterArr = new Float32Array(count);     // per-slot brightness (fixed for the slot's life)
+    var clumpXZArr = new Float32Array(count * 2); // per-clump world XZ — the vertex-safe wind/fade input
+    var cxzAttr = new THREE.InstancedBufferAttribute(clumpXZArr, 2);
+    cxzAttr.setUsage(THREE.DynamicDrawUsage);    // re-uploaded when clumps wrap
+    var tintArr = new Float32Array(count * 3).fill(1);  // per-clump biome tint (white default)
+    var tintAttr = new THREE.InstancedBufferAttribute(tintArr, 3);
+    tintAttr.setUsage(THREE.DynamicDrawUsage);   // re-uploaded when a clump wraps into a new biome
+    var mat = _gfMakeMaterial(jitterArr, cxzAttr, tintAttr);
+    var mesh = new THREE.InstancedMesh(geo, mat, count);
+    mesh.frustumCulled = false;
+
+    var slotScale = new Float32Array(count);     // per-slot size variation (fixed)
+    var wx = new Float32Array(count), wz = new Float32Array(count);  // current world XZ per slot
+    var dummy = new THREE.Object3D();
+
+    // (Re)place slot i at world (x,z): sample terrain there, rebuild its matrix +
+    // its clump-XZ + its biome tint. Invalid spots (road/water/steep) → scale 0.
+    function placeSlot(i, x, z) {
+        var s = sample(x, z) || { h: 0, valid: true, scaleMul: 1 };
+        wx[i] = x; wz[i] = z;
+        clumpXZArr[i * 2] = x; clumpXZArr[i * 2 + 1] = z;   // feed wind/fade in the vertex stage
+        var tnt = s.tint;                                    // {r,g,b} biome tint (optional)
+        tintArr[i * 3]     = tnt ? tnt.r : 1;
+        tintArr[i * 3 + 1] = tnt ? tnt.g : 1;
+        tintArr[i * 3 + 2] = tnt ? tnt.b : 1;
+        dummy.position.set(x, s.h || 0, z);
+        dummy.rotation.set(0, 0, 0);             // rotation is in-shader (instanceIndex hash)
+        var sc = s.valid ? Math.max(0.0, (s.scaleMul != null ? s.scaleMul : 1) * slotScale[i]) : 0;
+        dummy.scale.set(sc, sc, sc);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+    }
+
+    for (var i = 0; i < count; i++) {
+        slotScale[i] = Math.max(0.25, 1 + (_gfRand() - 0.5) * 2 * params.scaleVar);
+        jitterArr[i] = (1 - params.colorJitter) + _gfRand() * params.colorJitter * 2;
+        placeSlot(i, cx + (_gfRand() - 0.5) * 2 * R, cz + (_gfRand() - 0.5) * 2 * R);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    cxzAttr.needsUpdate = true;
+    tintAttr.needsUpdate = true;
+    grassApplyDynamic(params);
+    _gfFieldR.value = R;                 // activate the edge fade for this field
+    grassSetFieldCenter(cx, cz);
+
+    return {
+        mesh: mesh,
+        radius: R,
+        count: count,
+        // Call each frame with the player position. Wraps only the clumps that
+        // fell outside the square — amortized, proportional to how fast you move.
+        recenter: function (px, pz) {
+            var two = 2 * R, changed = false;
+            for (var i = 0; i < count; i++) {
+                var x = wx[i], z = wz[i], moved = false;
+                // wrap-until-inside (handles teleports as well as per-frame steps)
+                while (x > px + R) { x -= two; moved = true; }
+                while (x < px - R) { x += two; moved = true; }
+                while (z > pz + R) { z -= two; moved = true; }
+                while (z < pz - R) { z += two; moved = true; }
+                if (moved) { placeSlot(i, x, z); changed = true; }
+            }
+            if (changed) { mesh.instanceMatrix.needsUpdate = true; cxzAttr.needsUpdate = true; tintAttr.needsUpdate = true; }
+        },
+        // Re-sample + re-place EVERY slot around (px,pz) without rebuilding the mesh.
+        // For live slider re-dialing (density/patch/height/biome table) — call after
+        // mutating the biome table. Per-slot scale/jitter are regenerated too.
+        forceResample: function (px, pz) {
+            _gfSeed = 20260625;
+            for (var i = 0; i < count; i++) {
+                slotScale[i] = Math.max(0.25, 1 + (_gfRand() - 0.5) * 2 * params.scaleVar);
+                jitterArr[i] = (1 - params.colorJitter) + _gfRand() * params.colorJitter * 2;
+                placeSlot(i, px + (_gfRand() - 0.5) * 2 * R, pz + (_gfRand() - 0.5) * 2 * R);
+            }
+            mesh.instanceMatrix.needsUpdate = true;
+            cxzAttr.needsUpdate = true;
+            tintAttr.needsUpdate = true;
+            grassSetFieldCenter(px, pz);
+        },
+        dispose: function () { geo.dispose(); }
+    };
+}
+window.buildGrassFieldFollow = buildGrassFieldFollow;
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// DYNAMIC — push wind + color params into uniforms (no rebuild)
+// ═══════════════════════════════════════════════════════════════════════
+function grassApplyDynamic(p) {
+    var rad = (p.windDir || 0) * Math.PI / 180;
+    _gfWindDirX.value = Math.cos(rad);
+    _gfWindDirZ.value = Math.sin(rad);
+    _gfWindBias.value     = p.windBias;
+    _gfGustSharp.value    = p.gustSharp;
+    _gfWindRipple.value   = p.windRipple;
+    _gfGustStr.value      = p.gustStr;
+    _gfGustScale.value    = p.gustScale;
+    _gfGustSpeed.value    = p.gustSpeed;
+    _gfFlutterStr.value   = p.flutterStr;
+    _gfFlutterSpeed.value = p.flutterSpeed;
+    _gfPushRad.value      = p.pushRadius;
+    _gfPushStr.value      = p.pushStrength;
+    _gfBaseCol.value.set(p.baseR, p.baseG, p.baseB);
+    _gfTipCol.value.set(p.tipR, p.tipG, p.tipB);
+    _gfRootDark.value     = p.rootDark;
+    _gfBrightness.value   = p.brightness;
+}
+window.grassApplyDynamic = grassApplyDynamic;
+
+// Toggle the gust heatmap debug view (recolors blades by live gust strength).
+function grassSetGustView(on) { _gfGustView.value = on ? 1.0 : 0.0; }
+window.grassSetGustView = grassSetGustView;
+
+// Move the camera-relative field's centre (call each frame with the player XZ).
+function grassSetFieldCenter(cx, cz) { _gfFieldCx.value = cx; _gfFieldCz.value = cz; }
+window.grassSetFieldCenter = grassSetFieldCenter;
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// TICK — advance wind time + sync wind direction/player from the game
+//   wind:   { dirX, dirZ, speed } (optional — overrides the slider dir)
+//   player: { x, z } (optional — for push-aside; omit to park it far away)
+// ═══════════════════════════════════════════════════════════════════════
+function grassTickWind(dt, wind, player) {
+    _gfTime.value += dt;
+    if (wind) {
+        if (wind.dirX !== undefined) _gfWindDirX.value = wind.dirX;
+        if (wind.dirZ !== undefined) _gfWindDirZ.value = wind.dirZ;
+    }
+    if (player) {
+        _gfPlayerX.value = player.x;
+        _gfPlayerZ.value = player.z;
+    }
+}
+window.grassTickWind = grassTickWind;
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// DEBUG — paint the SAME gust wave the grass uses as moving ground bands.
+// Apply to a ground plane to SEE exactly where the gust is + which way it
+// rolls, perfectly in sync with the grass (shares the same uniforms). The
+// bright crest is where the grass leans hardest. (Bench Debug mode.)
+// ═══════════════════════════════════════════════════════════════════════
+function makeGustDebugMaterial() {
+    var T = THREE.TSL;
+    var m = new THREE.MeshBasicNodeMaterial();
+    var wpos = T.positionWorld;
+    // Mirror the grass gust EXACTLY (scrolling anisotropic noise) so the ground
+    // overlay shows the real gust field the blades respond to.
+    var alongW = wpos.x.mul(_gfWindDirX).add(wpos.z.mul(_gfWindDirZ));
+    var crossW = wpos.x.mul(_gfWindDirZ).sub(wpos.z.mul(_gfWindDirX));
+    var scroll = _gfTime.mul(_gfGustSpeed);
+    var nA = alongW.mul(_gfGustScale).sub(scroll);
+    var nC = crossW.mul(_gfGustScale.mul(0.5));
+    var gust = T.mx_noise_float(T.vec3(nA, nC, T.float(0.0))).mul(0.5).add(0.5).pow(_gfGustSharp);
+    m.colorNode = T.mix(T.vec3(0.02, 0.05, 0.28), T.vec3(1.0, 0.92, 0.18), gust);
+    return m;
+}
+window.makeGustDebugMaterial = makeGustDebugMaterial;
+
+// ═══ grass_field_game ══════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// GRASS FIELD (GAME) — terrain/biome-aware integration of the follow field
+// ═══════════════════════════════════════════════════════════════════════
+//
+// Wires flora/grass_field.js's camera-relative FOLLOW FIELD into the live game.
+// grass_field.js is the pure look/wind engine (also used by /grass_bench on flat
+// ground); THIS module is the game-only layer that knows about terrain + biomes:
+//
+//   - a per-biome table (density / patch size / height) — slider-tunable later
+//   - the real sample(x,z) over terrain: getH bounds, skip zones, slope reject,
+//     biome density + patch gating, dirt thinning, foundation cull
+//   - a per-frame tick: recenter the field on the player + feed wind from _wind
+//   - a SEASON seam (neutral multipliers now; one place to turn on later)
+//
+// Replaces simple_grass.js's static whole-map scatter (disabled, kept for A/B).
+// The bench does NOT load this module (no terrain stack) — that's the whole
+// reason the terrain-aware code lives here and not in grass_field.js.
+//
+// Phase status (see design/sov_grass_handoff.md + sov_grass_design.md):
+//   3a (this) = placement + per-biome density/patch/height, GLOBAL color.
+//   3b = per-biome color (per-instance tint, needs a grass_field.js engine touch).
+//   3c = in-game biome sliders.  3d = season + weather→wind coupling.
+//
+// DEPENDS ON (globals, shared scope):
+//   THREE, scene, playerPos, terrainMesh
+//   getH, getBiome, getTerrainNormal, smoothNoise
+//   TREELINE_H, ROAD_POINTS, PASS_ROAD_POINTS, CREEK_POINTS, LAKES, _distToPolyline
+//   placedPieces, currentSeason, window._wind, window._terrainTuning
+//   buildGrassFieldFollow, grassSetFieldCenter, grassTickWind, grassApplyDynamic,
+//   grassParamValues, GRASS_PARAMS  (from flora/grass_field.js)
+//   registerTick (from scene_setup.js)
+//
+// PROVIDES (window):
+//   _grassBiomeTuning   — the per-biome table (live-editable; rebuild to apply)
+//   _grassSeasonTuning  — the season multiplier seam
+//   _grassFieldTuning   — { radius, count } budget (rebuild to apply)
+//   _grassFieldRebuild()— tear down + rebuild the follow field (slider apply)
+//   _grassField         — the live follow-field handle (mesh/recenter/dispose)
+// ═══════════════════════════════════════════════════════════════════════
+
+
+// ── Per-biome placement + color table ──
+// density   : 0..1 fraction of the patch field that grows grass (1 = solid).
+// patchScale: noise frequency for the patch blobs — LOWER = BIGGER patches.
+// height    : blade scale multiplier for the biome (relative to GRASS_WORLD_SCALE).
+// heightVar : per-biome height variability (0 = uniform, 0.8 = very mixed).
+// tint      : {r,g,b} MULTIPLIER on the global base→tip gradient — the per-biome
+//             color refinement. 1/1/1 = pure global feel; warm/gold for dry biomes,
+//             lush/green for riparian, pale for alpine.
+var GRASS_BIOME = {
+    grassland:  { density: 1.00, patchScale: 0.055, height: 1.00, heightVar: 0.30, tint: { r: 1.00, g: 1.00, b: 1.00 } },
+    riparian:   { density: 0.92, patchScale: 0.050, height: 1.15, heightVar: 0.30, tint: { r: 0.90, g: 1.10, b: 0.85 } },
+    highDesert: { density: 0.45, patchScale: 0.080, height: 0.55, heightVar: 0.20, tint: { r: 1.35, g: 1.10, b: 0.65 } },
+    montane:    { density: 0.70, patchScale: 0.060, height: 0.78, heightVar: 0.25, tint: { r: 0.88, g: 0.96, b: 0.80 } },
+    subalpine:  { density: 0.40, patchScale: 0.070, height: 0.62, heightVar: 0.20, tint: { r: 0.95, g: 1.00, b: 0.88 } },
+    alpine:     { density: 0.15, patchScale: 0.090, height: 0.42, heightVar: 0.15, tint: { r: 1.00, g: 1.00, b: 0.95 } },
+};
+window._grassBiomeTuning = GRASS_BIOME;
+
+// ── Season seam (NEUTRAL for now) ──
+// Multipliers applied on top of the biome table at sample time. Turning seasons
+// on later = fill these in (e.g. winter densityMul→0.2, fall heightMul→0.9).
+// Mirrors how terrain.js already does seasonMul.
+var GRASS_SEASON = {
+    spring: { densityMul: 1.0, heightMul: 1.0 },
+    summer: { densityMul: 1.0, heightMul: 1.0 },
+    fall:   { densityMul: 1.0, heightMul: 1.0 },
+    winter: { densityMul: 1.0, heightMul: 1.0 },
+};
+window._grassSeasonTuning = GRASS_SEASON;
+
+// ── Field budget (rebuild to apply) ──
+var GRASS_FIELD = { radius: 55, count: 40000, radiusMobile: 40, countMobile: 26000 };
+window._grassFieldTuning = GRASS_FIELD;
+
+// Barron's dialed "breezy Colorado" look (from the bench, 2026-06-25) — the EXACT
+// dialed values, geometry untouched. windDir here is irrelevant in-game (the tick
+// overrides direction from window._wind every frame — the hunting read).
+//
+// ⚠ SCALE (2026-06-26): the bench dials blades at 4–20m; the GAME camera sits ~80m
+// back, where the dialed 0.62m fine blades are sub-pixel. The fix is NOT to fatten
+// the geometry (that flattens the curve → "vertical triangles") — it's to scale the
+// WHOLE clump uniformly via GRASS_WORLD_SCALE below, which preserves the dialed
+// curve/slimness/proportion exactly, just bigger. Keep these values = the bench.
+var _GG_DIALED = {
+    bladeH: 0.62, bladeHVar: 0.3, bladeW: 0.05, segments: 4, bladesPerClump: 6,
+    bend: 0.08, clumpSpread: 0.16, spacing: 0.48, patchiness: 0.86, scaleVar: 0.0,  // height variation is per-biome now (heightVar in the table) — keep the field's own = 0
+    colorJitter: 0.16, baseR: 0.085, baseG: 0.13, baseB: 0.03, tipR: 0.34, tipG: 0.4,
+    tipB: 0.09, rootDark: 0.45, brightness: 3.2, windDir: 167, windBias: 0.035,
+    gustStr: 0.515, gustScale: 0.3, gustSpeed: 0.9, gustSharp: 3.9, windRipple: 0.23,
+    flutterStr: 0.022, flutterSpeed: 3, pushRadius: 2, pushStrength: 0.7,
+};
+
+// Uniform clump scale applied on top of the dialed geometry so the bench look
+// reads at the game's ~80m camera. Scales H, W, bend curve, spread, AND wind sway
+// together → identical proportions, just larger. ~2.4 ≈ 0.62m → ~1.5m blades.
+// Tunable (slider later); per-biome height in the table is a RELATIVE multiplier on
+// top of this. Set on window so it can be dialed live then baked.
+var GRASS_WORLD_SCALE = 2.4;
+window._grassWorldScale = GRASS_WORLD_SCALE;
+
+// Stable per-position hash in [0,1] — for dirt-thinning that doesn't flicker on
+// re-sample (a clump must keep the same keep/cull decision across wraps).
+function _ggHash01(x, z) {
+    var ix = Math.floor(x * 13.13), iz = Math.floor(z * 7.77);
+    var h = (ix * 374761393 + iz * 668265263) & 0x7fffffff;
+    h = ((h ^ (h >> 13)) * 1274126177) & 0x7fffffff;
+    return (h & 0xffff) / 65535;
+}
+
+// Skip zones (roads / pass road / creek / lakes) — mirrors simple_grass._sgSkip.
+function _ggSkip(x, z) {
+    if (typeof ROAD_POINTS !== 'undefined' && ROAD_POINTS.length >= 2 && _distToPolyline(x, z, ROAD_POINTS) < 4) return true;
+    if (typeof PASS_ROAD_POINTS !== 'undefined' && PASS_ROAD_POINTS.length >= 2 && _distToPolyline(x, z, PASS_ROAD_POINTS) < 3) return true;
+    if (typeof CREEK_POINTS !== 'undefined' && CREEK_POINTS.length >= 2 && _distToPolyline(x, z, CREEK_POINTS) < 3) return true;
+    if (typeof LAKES !== 'undefined') {
+        for (var k = 0; k < LAKES.length; k++) {
+            var lk = LAKES[k];
+            if (Math.sqrt((x - lk.cx) * (x - lk.cx) + (z - lk.cz) * (z - lk.cz)) < lk.radius + 2) return true;
+        }
+    }
+    return false;
+}
+
+// Point inside any placed foundation footprint (rotated rect) — mirrors
+// simple_grass's foundation cull. Re-checked on every (re)sample, so as the
+// field wraps past a cabin its footprint clears automatically.
+function _ggInFoundation(x, z) {
+    if (typeof placedPieces === 'undefined' || !Array.isArray(placedPieces)) return false;
+    for (var i = 0; i < placedPieces.length; i++) {
+        var f = placedPieces[i];
+        if (f.type !== 'found8' && f.type !== 'foundation') continue;
+        var fw = (f.dimensions && f.dimensions.w) || 2.4;
+        var halfW = fw / 2;
+        var rotY = (f.rotation && f.rotation.y) || 0;
+        var dx = x - f.position.x, dz = z - f.position.z;
+        var c = Math.cos(-rotY), s = Math.sin(-rotY);
+        var lx = dx * c - dz * s, lz = dx * s + dz * c;
+        if (Math.abs(lx) <= halfW && Math.abs(lz) <= halfW) return true;
+    }
+    return false;
+}
+
+var _ggDirtPct = { highDesert: 0.60, riparian: 0.25, grassland: 0.35, montane: 0.45, subalpine: 0.30, alpine: 0.20 };
+
+// ── The integration seam: terrain/biome query for one clump slot. ──
+// Returns { h, valid, scaleMul }. valid:false collapses the clump to scale 0
+// (natural gaps for roads/water/steep/dirt/foundations + biome thinning).
+function _grassSample(x, z) {
+    var INVALID = { h: 0, valid: false, scaleMul: 0 };
+    var treeline = (typeof TREELINE_H !== 'undefined') ? TREELINE_H : 55;
+
+    var h = getH(x, z);
+    if (h < -0.5 || h > treeline - 3) return INVALID;
+    if (_ggSkip(x, z)) return INVALID;
+
+    // Steep-slope reject (BotW: grass only on near-flat ground).
+    var norm = (typeof getTerrainNormal === 'function') ? getTerrainNormal(x, z) : null;
+    if (norm && norm.y < 0.82) return INVALID;
+
+    var biome = getBiome(x, z, h);
+    var bt = GRASS_BIOME[biome] || GRASS_BIOME.grassland;
+    var season = GRASS_SEASON[currentSeason] || GRASS_SEASON.summer;
+
+    // Patch + density gate: smooth blobs sized by patchScale, filled by density.
+    // patch∈[0,1]; grass grows where patch < density → density 1 = solid carpet,
+    // density 0.15 = sparse blobs. Offsets decorrelate from the dirt-patch field.
+    var patch = smoothNoise(x * bt.patchScale + 31.7, z * bt.patchScale + 11.3);
+    var density = bt.density * season.densityMul;
+    if (patch > density) return INVALID;
+
+    // Dirt/rock patch thinning — don't hard-skip, leave sparse tufts (stable hash).
+    var TT = window._terrainTuning;
+    if (TT) {
+        var dirtN = smoothNoise(x * TT.dirtPatchFreq, z * TT.dirtPatchFreq);
+        var dirtPct = _ggDirtPct[biome] || 0.35;
+        if (dirtN < TT.dirtPatchAmount * dirtPct / 0.5) {
+            if (_ggHash01(x, z) > 0.30) return INVALID;
+        }
+    }
+
+    if (_ggInFoundation(x, z)) return INVALID;
+
+    var worldScale = (typeof window._grassWorldScale === 'number') ? window._grassWorldScale : GRASS_WORLD_SCALE;
+    // Per-clump height variation, amount set PER BIOME (bt.heightVar). Stable hash
+    // (decorrelated from the dirt hash) so a clump keeps its height across wraps.
+    var hv = 1 + (_ggHash01(x + 0.37, z + 0.91) - 0.5) * 2 * (bt.heightVar || 0);
+    var scaleMul = worldScale * bt.height * season.heightMul * Math.max(0.15, hv);
+    return { h: h, valid: true, scaleMul: scaleMul, tint: bt.tint };
+}
+window._grassSample = _grassSample;
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// BUILD + REBUILD
+// ═══════════════════════════════════════════════════════════════════════
+var _grassField = null;
+
+function _buildGameGrass() {
+    if (typeof buildGrassFieldFollow !== 'function') {
+        console.warn('[grass_field_game] grass_field.js not loaded — skipping');
+        return;
+    }
+    if (_grassField) {
+        scene.remove(_grassField.mesh);
+        _grassField.dispose();
+        _grassField = null;
+    }
+
+    var p = grassParamValues(GRASS_PARAMS);
+    for (var k in _GG_DIALED) p[k] = _GG_DIALED[k];   // bake the dialed look
+    window._grassParams = p;                          // expose for live global color/wind dialing
+
+    var mobile = !!window._isMobile;
+    var radius = mobile ? GRASS_FIELD.radiusMobile : GRASS_FIELD.radius;
+    var count  = mobile ? GRASS_FIELD.countMobile  : GRASS_FIELD.count;
+
+    var px = (typeof playerPos !== 'undefined') ? playerPos.x : 0;
+    var pz = (typeof playerPos !== 'undefined') ? playerPos.z : 0;
+
+    _grassField = buildGrassFieldFollow(p, {
+        radius: radius, count: count, cx: px, cz: pz, sample: _grassSample,
+    });
+    scene.add(_grassField.mesh);
+    grassApplyDynamic(p);
+    window._grassField = _grassField;
+    console.log('[grass_field_game] follow field built — ' + count + ' clumps, R=' + radius + (mobile ? ' (mobile)' : ''));
+}
+window._grassFieldRebuild = _buildGameGrass;
+
+// Re-sample every clump around the player WITHOUT a full rebuild — for live slider
+// dialing of the biome table / world scale. Debounced so dragging a slider doesn't
+// re-place 40k clumps every input event (fires once you pause ~120ms).
+window._grassResample = function () {
+    if (_grassField && typeof playerPos !== 'undefined') _grassField.forceResample(playerPos.x, playerPos.z);
+};
+var _ggResampleTimer = null;
+window._grassResampleDebounced = function () {
+    if (_ggResampleTimer) clearTimeout(_ggResampleTimer);
+    _ggResampleTimer = setTimeout(function () { _ggResampleTimer = null; window._grassResample(); }, 120);
+};
+
+// Push the GLOBAL color/wind params (base/tip/brightness) into the live shader
+// uniforms — instant, no resample (these are uniforms, not per-instance). For the
+// high-level color dials.
+window._grassApplyColor = function () {
+    if (window._grassParams && typeof grassApplyDynamic === 'function') grassApplyDynamic(window._grassParams);
+};
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// PER-FRAME TICK — recenter on player + feed wind direction from _wind
+// ═══════════════════════════════════════════════════════════════════════
+registerTick('grass_field_game', function (dt) {
+    if (!_grassField || typeof playerPos === 'undefined') return;
+    var px = playerPos.x, pz = playerPos.z;
+    _grassField.recenter(px, pz);          // wrap clumps that fell behind → ahead
+    grassSetFieldCenter(px, pz);           // move the edge-fade centre with the player
+    // Direction from the live weather wind (hunting read). Strength/gust stay on
+    // the dialed values for now — weather→strength coupling is Phase 3d.
+    var wind = window._wind ? { dirX: window._wind.dirX, dirZ: window._wind.dirZ } : null;
+    grassTickWind(dt, wind, { x: px, z: pz });
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// INIT — build once terrain + player + the engine are ready
+// ═══════════════════════════════════════════════════════════════════════
+if (typeof registerTick === 'function') {
+    var _ggInitDone = false;
+    registerTick('grass_field_game_init', function () {
+        if (_ggInitDone) return;
+        if (typeof terrainMesh === 'undefined' || !terrainMesh) return;   // wait for terrain
+        if (typeof playerPos === 'undefined') return;                     // wait for player
+        if (typeof buildGrassFieldFollow !== 'function') return;          // wait for engine
+        _ggInitDone = true;
+        _buildGameGrass();
+    });
+}
 
 // ═══ ground_scatter ════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════
@@ -23185,16 +24047,21 @@ let isRunning = false;
 // Jump and movement polish
 let jumpVelocity = 0;
 let isGrounded = true;
-const JUMP_FORCE = 9.5;         // initial upward velocity — snappy launch
-const GRAVITY = 25;             // strong gravity — heavy, not floaty
-const JUMP_BUFFER_TIME = 0.08;  // 80ms buffer — can press space slightly before landing
-const AIR_CONTROL = 0.15;       // 15% of ground steering while airborne
-const GROUND_ACCEL = 50;        // ground acceleration (snappy response)
-const AIR_ACCEL = 5;            // air acceleration (very limited)
-const GROUND_FRICTION = 25;     // strong deceleration — stops fast, no ice skating
-const WALK_SPEED = 5.0;         // max walk speed (units/sec)
-const RUN_SPEED = 9.0;          // max sprint speed (units/sec)
-const COYOTE_TIME = 0.05;       // 50ms grace period after leaving ground
+// NOTE: these are `let` (not const) so the cliff_test jump-feel tuning panel can
+// retune them live without a refresh. Values + behavior are unchanged in normal play.
+let JUMP_FORCE = 9.5;           // initial upward velocity — snappy launch
+let GRAVITY = 25;               // strong gravity — heavy, not floaty
+let JUMP_BUFFER_TIME = 0.08;    // 80ms buffer — can press space slightly before landing
+let AIR_CONTROL = 0.15;         // 15% of ground steering while airborne
+let GROUND_ACCEL = 50;          // ground acceleration (snappy response)
+let AIR_ACCEL = 5;              // air acceleration (very limited)
+let GROUND_FRICTION = 25;       // strong deceleration — stops fast, no ice skating
+let WALK_SPEED = 5.0;           // max walk speed (units/sec)
+let RUN_SPEED = 9.0;            // max sprint speed (units/sec)
+let COYOTE_TIME = 0.05;         // 50ms grace period after leaving ground
+// Cliff system (sov_cliff_traversal_design.md): the max-walkable-slope gate.
+let MAX_WALK_SLOPE_DEG = 45;    // steeper than this = unwalkable cliff — must JUMP, not walk, up it
+let SLIDE_SPEED = 6;            // downhill slide speed (m/s) when standing on a too-steep face (no purchase)
 const FLIP_STREAK_REQUIRED = 5;     // jumps to trigger the flip
 const FLIP_STREAK_WINDOW = 0.6;     // max seconds between landing → next jump-press
 const FLIP_DURATION = 0.7;          // seconds for one full 2π rotation
@@ -24045,6 +24912,22 @@ function updatePlayerMovement(dt) {
         }
     }
 
+    // === MAX-WALK SLOPE GATE (cliff system, sov_cliff_traversal_design.md) ===
+    // Block grounded movement that would WALK up terrain steeper than MAX_WALK_SLOPE_DEG.
+    // Only gates ground-walking *uphill* — airborne (jumping) can still land on ledges, and
+    // descending/traversing is unaffected. This is what turns steep faces into real "cliffs"
+    // you must JUMP up, not crawl up. (Building step-up uses _stepUpProbes, not terrain, so
+    // foundations/low rocks are unaffected.)
+    if (isGrounded && (Math.abs(px - playerPos.x) > 1e-5 || Math.abs(pz - playerPos.z) > 1e-5)) {
+        const _cutNY = Math.cos(MAX_WALK_SLOPE_DEG * Math.PI / 180);
+        if (getTerrainNormal(px, pz).y < _cutNY && getH(px, pz) > playerPos.y + 0.02) {
+            px = playerPos.x;   // refuse the step onto the too-steep face
+            pz = playerPos.z;
+            horizontalVel.x = 0;
+            horizontalVel.z = 0;
+        }
+    }
+
     playerPos.x = px;
     playerPos.z = pz;
 
@@ -24096,6 +24979,27 @@ function updatePlayerMovement(dt) {
     if (typeof _floorExtensions !== 'undefined') {
         for (let i = 0; i < _floorExtensions.length; i++) {
             terrainHeight = _floorExtensions[i](playerPos.x, playerPos.z, terrainHeight);
+        }
+    }
+
+    // --- STEEP-SLOPE SLIDE (cliff system): no purchase on a too-steep face ---
+    // If grounded on terrain steeper than the walk gate (e.g. you landed on a cliff face
+    // instead of a ledge), slide downhill — steeper = faster. Pairs with band checkpoints:
+    // miss a jump, slide back down to the last rest-ledge.
+    if (isGrounded) {
+        const _cutNY = Math.cos(MAX_WALK_SLOPE_DEG * Math.PI / 180);
+        const _curN = getTerrainNormal(playerPos.x, playerPos.z);
+        if (_curN.y < _cutNY) {
+            const _sxz = Math.sqrt(_curN.x * _curN.x + _curN.z * _curN.z) || 1;
+            const _slide = SLIDE_SPEED * (_cutNY - _curN.y) * dt;  // normal.xz points downhill
+            playerPos.x += (_curN.x / _sxz) * _slide;
+            playerPos.z += (_curN.z / _sxz) * _slide;
+            terrainHeight = getH(playerPos.x, playerPos.z);  // re-sync floor to the new spot
+            if (typeof _floorExtensions !== 'undefined') {
+                for (let i = 0; i < _floorExtensions.length; i++) {
+                    terrainHeight = _floorExtensions[i](playerPos.x, playerPos.z, terrainHeight);
+                }
+            }
         }
     }
 
@@ -61441,6 +62345,90 @@ registerTick('post_effects_grain', function(_dt) {
     );
 
     // ══════════════════════════════════════════════
+    // GRASS FIELD (new follow-field grass — flora/grass_field_game.js)
+    // ══════════════════════════════════════════════
+    addSection('Grass Field');
+    addNote('Live dials re-sample around you. Radius/Count need RESPAWN.');
+
+    addSlider('World Scale', 0.5, 4.0, 0.05,
+        function() { return (typeof window._grassWorldScale === 'number') ? window._grassWorldScale : 2.4; },
+        function(v) { window._grassWorldScale = v; if (window._grassResampleDebounced) window._grassResampleDebounced(); }
+    );
+    addNote('Overall blade size (preserves the dialed curve). ~1.7 = knee-high.');
+
+    addSlider('Field Radius', 20, 100, 5,
+        function() { return window._grassFieldTuning ? window._grassFieldTuning.radius : 55; },
+        function(v) { if (window._grassFieldTuning) window._grassFieldTuning.radius = v; }
+    );
+    addSlider('Clump Count', 5000, 60000, 1000,
+        function() { return window._grassFieldTuning ? window._grassFieldTuning.count : 40000; },
+        function(v) { if (window._grassFieldTuning) window._grassFieldTuning.count = v; }
+    );
+
+    var grassRespawnBtn = document.createElement('button');
+    grassRespawnBtn.textContent = 'RESPAWN GRASS';
+    grassRespawnBtn.style.cssText = 'width:100%; margin-top:6px; padding:5px; background:rgba(106,168,216,0.15); border:1px solid rgba(106,168,216,0.3); border-radius:4px; color:#6aa8d8; font:10px/1 "SF Mono",Menlo,monospace; cursor:pointer; text-transform:uppercase; letter-spacing:1px;';
+    grassRespawnBtn.addEventListener('click', function() {
+        grassRespawnBtn.textContent = 'RESPAWNING...';
+        setTimeout(function() {
+            if (window._grassFieldRebuild) window._grassFieldRebuild();
+            setTimeout(function() { grassRespawnBtn.textContent = 'RESPAWN GRASS'; }, 500);
+        }, 50);
+    });
+    _currentSection.appendChild(grassRespawnBtn);
+
+    // ── Global grass color (high-level feel — LIVE uniforms, instant) ──
+    addNote('── Global Color (all biomes inherit) ──');
+    function _gColor(label, key) {
+        var max = (key === 'brightness') ? 6.0 : 1.0;
+        var step = (key === 'brightness') ? 0.05 : 0.005;
+        addSlider(label, 0.0, max, step,
+            function() { return window._grassParams ? window._grassParams[key] : 0; },
+            function(v) { if (window._grassParams) { window._grassParams[key] = v; if (window._grassApplyColor) window._grassApplyColor(); } }
+        );
+    }
+    _gColor('Base R', 'baseR'); _gColor('Base G', 'baseG'); _gColor('Base B', 'baseB');
+    _gColor('Tip R', 'tipR');   _gColor('Tip G', 'tipG');   _gColor('Tip B', 'tipB');
+    _gColor('Brightness', 'brightness');
+    addNote('Base = root color, Tip = blade-tip color, Brightness = overall.');
+
+    // Per-biome dials — density / patch size / height / height variation / tint (all LIVE).
+    function _addGrassBiomeSliders(bKey, bLabel) {
+        addSection('Grass — ' + bLabel);
+        addSlider('Density', 0.0, 1.0, 0.05,
+            function() { return window._grassBiomeTuning ? window._grassBiomeTuning[bKey].density : 0.5; },
+            function(v) { if (window._grassBiomeTuning) { window._grassBiomeTuning[bKey].density = v; if (window._grassResampleDebounced) window._grassResampleDebounced(); } }
+        );
+        addSlider('Patch Size', 0.02, 0.20, 0.005,
+            function() { return window._grassBiomeTuning ? window._grassBiomeTuning[bKey].patchScale : 0.06; },
+            function(v) { if (window._grassBiomeTuning) { window._grassBiomeTuning[bKey].patchScale = v; if (window._grassResampleDebounced) window._grassResampleDebounced(); } }
+        );
+        addNote('Lower = bigger patches');
+        addSlider('Height', 0.2, 2.0, 0.05,
+            function() { return window._grassBiomeTuning ? window._grassBiomeTuning[bKey].height : 1.0; },
+            function(v) { if (window._grassBiomeTuning) { window._grassBiomeTuning[bKey].height = v; if (window._grassResampleDebounced) window._grassResampleDebounced(); } }
+        );
+        addNote('Relative to World Scale');
+        addSlider('Height Var', 0.0, 0.8, 0.05,
+            function() { return window._grassBiomeTuning ? window._grassBiomeTuning[bKey].heightVar : 0.3; },
+            function(v) { if (window._grassBiomeTuning) { window._grassBiomeTuning[bKey].heightVar = v; if (window._grassResampleDebounced) window._grassResampleDebounced(); } }
+        );
+        addNote('── Tint (× global color; 1 = neutral) ──');
+        function _bTint(label, ch) {
+            addSlider(label, 0.0, 2.0, 0.02,
+                function() { return window._grassBiomeTuning ? window._grassBiomeTuning[bKey].tint[ch] : 1; },
+                function(v) { if (window._grassBiomeTuning) { window._grassBiomeTuning[bKey].tint[ch] = v; if (window._grassResampleDebounced) window._grassResampleDebounced(); } }
+            );
+        }
+        _bTint('Tint R', 'r'); _bTint('Tint G', 'g'); _bTint('Tint B', 'b');
+    }
+    var _grassBiomes = ['grassland', 'riparian', 'montane', 'subalpine', 'highDesert', 'alpine'];
+    var _grassBiomeLabels = ['Grassland', 'Riparian', 'Montane', 'Subalpine', 'High Desert', 'Alpine'];
+    for (var gbi = 0; gbi < _grassBiomes.length; gbi++) {
+        _addGrassBiomeSliders(_grassBiomes[gbi], _grassBiomeLabels[gbi]);
+    }
+
+    // ══════════════════════════════════════════════
     // SNAPSHOT
     // ══════════════════════════════════════════════
     const snapBtn = document.createElement('button');
@@ -61463,6 +62451,25 @@ registerTick('post_effects_grain', function(_dt) {
         }
 
         const snap = {
+            grassField: {
+                worldScale: (typeof window._grassWorldScale === 'number') ? +window._grassWorldScale.toFixed(2) : null,
+                radius: window._grassFieldTuning ? window._grassFieldTuning.radius : null,
+                count: window._grassFieldTuning ? window._grassFieldTuning.count : null,
+                color: window._grassParams ? {
+                    baseR: +window._grassParams.baseR.toFixed(3), baseG: +window._grassParams.baseG.toFixed(3), baseB: +window._grassParams.baseB.toFixed(3),
+                    tipR: +window._grassParams.tipR.toFixed(3), tipG: +window._grassParams.tipG.toFixed(3), tipB: +window._grassParams.tipB.toFixed(3),
+                    brightness: +window._grassParams.brightness.toFixed(2),
+                } : null,
+                biomes: window._grassBiomeTuning ? (function() {
+                    var o = {};
+                    for (var bk in window._grassBiomeTuning) {
+                        var b = window._grassBiomeTuning[bk];
+                        o[bk] = { density: +b.density.toFixed(2), patchScale: +b.patchScale.toFixed(3), height: +b.height.toFixed(2), heightVar: +b.heightVar.toFixed(2),
+                                  tint: { r: +b.tint.r.toFixed(2), g: +b.tint.g.toFixed(2), b: +b.tint.b.toFixed(2) } };
+                    }
+                    return o;
+                })() : null,
+            },
             sky: window._skyMesh ? {
                 turbidity: +window._skyMesh.turbidity.value.toFixed(1),
                 rayleigh: +window._skyMesh.rayleigh.value.toFixed(2),
