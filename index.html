@@ -60391,6 +60391,48 @@ registerTick('post_effects_grain', function(_dt) {
     }
 
     // ══════════════════════════════════════════════
+    // DEV SPAWNS — quick-grant gear + truck for testing
+    // ══════════════════════════════════════════════
+    // Buttons drop items straight into inventory; the Car row toggles the
+    // truck's spawn/despawn (reuses window._spawnVehicle / _despawnVehicle).
+    addSection('Dev Spawns');
+    addNote('Quick-grant gear into your inventory + toggle the truck. Testing only.');
+
+    // Rifle → inventory
+    var _devRifleBtn = document.createElement('button');
+    _devRifleBtn.textContent = 'GIVE RIFLE';
+    _devRifleBtn.style.cssText = 'width:100%; margin-bottom:6px; padding:4px; background:rgba(106,168,216,0.15); border:1px solid rgba(106,168,216,0.3); border-radius:4px; color:#6aa8d8; font:10px/1 "SF Mono",Menlo,monospace; cursor:pointer; text-transform:uppercase; letter-spacing:1px;';
+    _devRifleBtn.addEventListener('click', function() {
+        var ok = (typeof addItem === 'function') && addItem('rifle', 1);
+        _devRifleBtn.textContent = ok ? 'RIFLE ADDED' : 'NO ROOM';
+        _devRifleBtn.style.color = ok ? '#80ff80' : '#c08040';
+        setTimeout(function() { _devRifleBtn.textContent = 'GIVE RIFLE'; _devRifleBtn.style.color = '#6aa8d8'; }, 800);
+    });
+    _currentSection.appendChild(_devRifleBtn);
+
+    // Rifle rounds (bullets) → inventory — one full stack
+    var _devAmmoBtn = document.createElement('button');
+    _devAmmoBtn.textContent = 'GIVE 30 BULLETS';
+    _devAmmoBtn.style.cssText = 'width:100%; margin-bottom:6px; padding:4px; background:rgba(106,168,216,0.15); border:1px solid rgba(106,168,216,0.3); border-radius:4px; color:#6aa8d8; font:10px/1 "SF Mono",Menlo,monospace; cursor:pointer; text-transform:uppercase; letter-spacing:1px;';
+    _devAmmoBtn.addEventListener('click', function() {
+        var ok = (typeof addItem === 'function') && addItem('rifle_round', 30);
+        _devAmmoBtn.textContent = ok ? '+30 BULLETS' : 'NO ROOM';
+        _devAmmoBtn.style.color = ok ? '#80ff80' : '#c08040';
+        setTimeout(function() { _devAmmoBtn.textContent = 'GIVE 30 BULLETS'; _devAmmoBtn.style.color = '#6aa8d8'; }, 800);
+    });
+    _currentSection.appendChild(_devAmmoBtn);
+
+    // Car — toggle spawn/despawn (truck spawns at its fixed lot)
+    addToggle('Car',
+        function() { return !!window._vehicleSpawned; },
+        function(v) {
+            if (v) { if (window._spawnVehicle) window._spawnVehicle(); }
+            else   { if (window._despawnVehicle) window._despawnVehicle(); }
+        }
+    );
+    addNote('Truck spawns at its lot (SW of spawn, ~ -142/-50). Toggle OFF to despawn. ~395 meshes.');
+
+    // ══════════════════════════════════════════════
     // BASE LIGHT TINT — warms every hour of day in one knob
     // ══════════════════════════════════════════════
     // Blends TOD-lerped sun/ambient color toward a user-picked tint color.
