@@ -27818,6 +27818,8 @@ function _buildDevMenu() {
         { type: 'cane_pole',        label: '\ud83c\udfa3 Cane Pole' },
         { type: 'recurve_bow',      label: '\ud83c\udff9 Bow' },
         { type: 'arrow',            label: '\u27b3 Arrows x10' },
+        { type: 'hunting_rifle',    label: '\ud83d\udd2b Rifle' },
+        { type: 'rifle_round',      label: '\ud83d\udfe1 Bullets x30' },
         { type: 'water_jug',        label: '\ud83e\uded9 Water Jug' },
         { type: 'water_bottle',     label: '\ud83e\udd64 Water Bottle' },
         { type: 'watering_can',     label: '\ud83d\udeb0 Watering Can' },
@@ -27827,6 +27829,17 @@ function _buildDevMenu() {
             _addDevBtn(si.label, 'tool', function() { _doSpawn(si.type, si.label); });
         })(toolItems[i]);
     }
+
+    // ── Vehicle ──
+    // Single button that toggles the truck on/off. Spawns at its fixed lot
+    // (SW of spawn, ~ -142/-50), reusing window._spawnVehicle / _despawnVehicle.
+    _addDevSection('Vehicle');
+    _addDevBtn('🚗 Car: ' + (window._vehicleSpawned ? 'ON' : 'OFF'), 'tool', function(e) {
+        if (window._vehicleSpawned) { if (window._despawnVehicle) window._despawnVehicle(); }
+        else                        { if (window._spawnVehicle)   window._spawnVehicle();   }
+        e.currentTarget.textContent = '🚗 Car: ' + (window._vehicleSpawned ? 'ON' : 'OFF');
+        if (typeof showToast === 'function') showToast(window._vehicleSpawned ? 'Truck spawned (SW lot)' : 'Truck despawned');
+    });
 
     // ── Materials ──
     _addDevSection('Materials');
@@ -60389,48 +60402,6 @@ registerTick('post_effects_grain', function(_dt) {
         _currentSection.appendChild(row);
         return btn;
     }
-
-    // ══════════════════════════════════════════════
-    // DEV SPAWNS — quick-grant gear + truck for testing
-    // ══════════════════════════════════════════════
-    // Buttons drop items straight into inventory; the Car row toggles the
-    // truck's spawn/despawn (reuses window._spawnVehicle / _despawnVehicle).
-    addSection('Dev Spawns');
-    addNote('Quick-grant gear into your inventory + toggle the truck. Testing only.');
-
-    // Rifle → inventory
-    var _devRifleBtn = document.createElement('button');
-    _devRifleBtn.textContent = 'GIVE RIFLE';
-    _devRifleBtn.style.cssText = 'width:100%; margin-bottom:6px; padding:4px; background:rgba(106,168,216,0.15); border:1px solid rgba(106,168,216,0.3); border-radius:4px; color:#6aa8d8; font:10px/1 "SF Mono",Menlo,monospace; cursor:pointer; text-transform:uppercase; letter-spacing:1px;';
-    _devRifleBtn.addEventListener('click', function() {
-        var ok = (typeof addItem === 'function') && addItem('rifle', 1);
-        _devRifleBtn.textContent = ok ? 'RIFLE ADDED' : 'NO ROOM';
-        _devRifleBtn.style.color = ok ? '#80ff80' : '#c08040';
-        setTimeout(function() { _devRifleBtn.textContent = 'GIVE RIFLE'; _devRifleBtn.style.color = '#6aa8d8'; }, 800);
-    });
-    _currentSection.appendChild(_devRifleBtn);
-
-    // Rifle rounds (bullets) → inventory — one full stack
-    var _devAmmoBtn = document.createElement('button');
-    _devAmmoBtn.textContent = 'GIVE 30 BULLETS';
-    _devAmmoBtn.style.cssText = 'width:100%; margin-bottom:6px; padding:4px; background:rgba(106,168,216,0.15); border:1px solid rgba(106,168,216,0.3); border-radius:4px; color:#6aa8d8; font:10px/1 "SF Mono",Menlo,monospace; cursor:pointer; text-transform:uppercase; letter-spacing:1px;';
-    _devAmmoBtn.addEventListener('click', function() {
-        var ok = (typeof addItem === 'function') && addItem('rifle_round', 30);
-        _devAmmoBtn.textContent = ok ? '+30 BULLETS' : 'NO ROOM';
-        _devAmmoBtn.style.color = ok ? '#80ff80' : '#c08040';
-        setTimeout(function() { _devAmmoBtn.textContent = 'GIVE 30 BULLETS'; _devAmmoBtn.style.color = '#6aa8d8'; }, 800);
-    });
-    _currentSection.appendChild(_devAmmoBtn);
-
-    // Car — toggle spawn/despawn (truck spawns at its fixed lot)
-    addToggle('Car',
-        function() { return !!window._vehicleSpawned; },
-        function(v) {
-            if (v) { if (window._spawnVehicle) window._spawnVehicle(); }
-            else   { if (window._despawnVehicle) window._despawnVehicle(); }
-        }
-    );
-    addNote('Truck spawns at its lot (SW of spawn, ~ -142/-50). Toggle OFF to despawn. ~395 meshes.');
 
     // ══════════════════════════════════════════════
     // BASE LIGHT TINT — warms every hour of day in one knob
