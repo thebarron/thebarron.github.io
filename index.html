@@ -17373,7 +17373,7 @@ let vehicleAirTime    = 0;
 let vehicleJustLanded = false;
 let vehicleWheelSpin  = 0;
 let vehicleSlipAmount = 0;      // 0=grip, 1=full slide (drives audio + dust)
-let vehicleCurrentSurface = { traction: 0.85, name: 'GRASS' };
+let vehicleCurrentSurface = { traction: 0.72, drag: 0.018, cap: 0.38, name: 'GRASS' };
 let vehicleWheelDriveSpeed = 0; // How fast the wheels are turning (decoupled from vehicleSpeed)
 let vehicleWheelSlipRatio = 0;  // 0 = no slip, 1 = full spin (drives audio + dust)
 
@@ -18144,6 +18144,31 @@ function _syncDeerFromServer() {
     }
 }
 
+// ── Water adjust for hoofed wildlife (deer + elk) ──
+// Animals used to snap y = getH() and run straight through the creek. Now:
+// shallow water = wade (slower), deep water = swim (body rides the surface,
+// nose-up pitch, slower still). Writes mesh Y (+ pitch), returns the speed
+// multiplier the caller applies to its NEXT movement step (1-tick lag is
+// invisible on ambient animals and saves a second water query per tick).
+// noseUp sign is per-model facing — deer's legacy merged geo faces +Z so
+// nose-up = NEGATIVE rotation.x; the articulated elk faces -Z so POSITIVE.
+// Derived per design/sov_animation_conventions.md, not intuited.
+function _waterAdjustAnimal(mesh, legDepth, buoyY, noseUp) {
+    var w = (typeof getWaterAt === 'function')
+          ? getWaterAt(mesh.position.x, mesh.position.z) : null;
+    if (w && w.inChannel && w.depth > legDepth) {
+        mesh.position.y = w.surfaceY - buoyY;
+        mesh.rotation.x += (noseUp - mesh.rotation.x) * 0.25;
+        return 0.45;
+    }
+    mesh.position.y = getH(mesh.position.x, mesh.position.z);
+    if (mesh.rotation.x !== 0) {
+        mesh.rotation.x *= 0.75;
+        if (Math.abs(mesh.rotation.x) < 0.005) mesh.rotation.x = 0;
+    }
+    return (w && w.inChannel && w.depth > 0.35) ? 0.65 : 1.0;
+}
+
 // ── Wildlife Behavior Tick ──
 // Distance LOD: <60u = every frame, 60-150u = every 4th, >150u = every 15th
 function _shouldTickAnimal(idx, pDistSq) {
@@ -18218,9 +18243,10 @@ function tickWildlife(dt) {
             if (fDistSq > 0.25) {  // 0.5²
                 var fDist = Math.sqrt(fDistSq);
                 var fInv = 1 / fDist;
-                a.mesh.position.x += (fdx * fInv) * DEER_FLEE_SPEED * dt;
-                a.mesh.position.z += (fdz * fInv) * DEER_FLEE_SPEED * dt;
-                a.mesh.position.y = getH(a.mesh.position.x, a.mesh.position.z);
+                var fWMult = DEER_FLEE_SPEED * (a._wMult || 1);
+                a.mesh.position.x += (fdx * fInv) * fWMult * dt;
+                a.mesh.position.z += (fdz * fInv) * fWMult * dt;
+                a._wMult = _waterAdjustAnimal(a.mesh, 0.9, 1.1, -0.18);
                 a.mesh.rotation.y = Math.atan2(fdx, fdz);
             } else {
                 a.state = 'grazing';
@@ -18243,9 +18269,10 @@ function tickWildlife(dt) {
             if (distSq > 0.25) {  // 0.5²
                 var dist = Math.sqrt(distSq);
                 var dInv = 1 / dist;
-                a.mesh.position.x += (dx * dInv) * 1.2 * dt;
-                a.mesh.position.z += (dz * dInv) * 1.2 * dt;
-                a.mesh.position.y = getH(a.mesh.position.x, a.mesh.position.z);
+                var wWMult = 1.2 * (a._wMult || 1);
+                a.mesh.position.x += (dx * dInv) * wWMult * dt;
+                a.mesh.position.z += (dz * dInv) * wWMult * dt;
+                a._wMult = _waterAdjustAnimal(a.mesh, 0.9, 1.1, -0.18);
                 a.mesh.rotation.y = Math.atan2(dx, dz);
             } else {
                 a.state = 'grazing';
@@ -18319,6 +18346,8 @@ function tickWildlife(dt) {
                 var wantClip = e.state === 'fleeing' ? (e.wounded ? 'limp' : 'gallop')
                              : e.state === 'walking' ? 'walk'
                              : 'graze';
+                // Swimming elk can't gallop or graze — paddle at a walk cadence
+                if (e._wMult === 0.45 && (wantClip === 'gallop' || wantClip === 'graze')) wantClip = 'walk';
                 if (e.clip !== wantClip) { e.animator.play(wantClip); e.clip = wantClip; }
                 e.animator.update(e._animDt);   // accumulated — real-rate at any tick cadence
             }
@@ -18332,9 +18361,10 @@ function tickWildlife(dt) {
                 if (efDistSq > 0.25) {  // 0.5²
                     var efDist = Math.sqrt(efDistSq);
                     var efInv = 1 / efDist;
-                    e.mesh.position.x += (efdx * efInv) * fleeSpeed * dt;
-                    e.mesh.position.z += (efdz * efInv) * fleeSpeed * dt;
-                    e.mesh.position.y = getH(e.mesh.position.x, e.mesh.position.z);
+                    var efWMult = fleeSpeed * (e._wMult || 1);
+                    e.mesh.position.x += (efdx * efInv) * efWMult * dt;
+                    e.mesh.position.z += (efdz * efInv) * efWMult * dt;
+                    e._wMult = _waterAdjustAnimal(e.mesh, 1.2, 1.35, 0.18);
                     e.mesh.rotation.y = Math.atan2(efdx, efdz);
                 } else {
                     e.state = 'grazing';
@@ -18356,9 +18386,10 @@ function tickWildlife(dt) {
                 if (edistSq > 0.25) {  // 0.5²
                     var edist = Math.sqrt(edistSq);
                     var ediInv = 1 / edist;
-                    e.mesh.position.x += (edx * ediInv) * 0.9 * dt;
-                    e.mesh.position.z += (edz * ediInv) * 0.9 * dt;
-                    e.mesh.position.y = getH(e.mesh.position.x, e.mesh.position.z);
+                    var ewWMult = 0.9 * (e._wMult || 1);
+                    e.mesh.position.x += (edx * ediInv) * ewWMult * dt;
+                    e.mesh.position.z += (edz * ediInv) * ewWMult * dt;
+                    e._wMult = _waterAdjustAnimal(e.mesh, 1.2, 1.35, 0.18);
                     e.mesh.rotation.y = Math.atan2(edx, edz);
                 } else {
                     e.state = 'grazing';
@@ -18580,8 +18611,37 @@ function _mergeRabbitGeo() {
 // SPAWN / DESPAWN
 // ═══════════════════════════════════════════════════════════════════════
 
+// ── Water avoidance ──
+// Rabbits don't swim (sov_direction pillar 6: "rabbits avoid creeks").
+// Targets that land in water get re-aimed; a step about to enter water stops
+// or deflects along the bank instead.
+function _rabbitWaterBlocked(x, z) {
+    if (typeof getWaterAt !== 'function') return false;
+    return getWaterAt(x, z).depth > 0.12;
+}
+
+// Try the base angle, then fan outward (±40°, ±80°, ±120°, 180°) until both
+// the target and the midpoint of the path are dry. Returns true and writes
+// r.targetX/targetZ on success; false = boxed in, caller keeps the rabbit put.
+function _rabbitAimDry(r, baseAngle, dist) {
+    var offsets = [0, 0.7, -0.7, 1.4, -1.4, 2.1, -2.1, Math.PI];
+    for (var i = 0; i < offsets.length; i++) {
+        var ang = baseAngle + offsets[i];
+        var tx = r.x + Math.sin(ang) * dist;
+        var tz = r.z + Math.cos(ang) * dist;
+        if (_rabbitWaterBlocked(tx, tz)) continue;
+        if (_rabbitWaterBlocked((r.x + tx) * 0.5, (r.z + tz) * 0.5)) continue;
+        r.targetX = tx;
+        r.targetZ = tz;
+        return true;
+    }
+    return false;
+}
+
 function _spawnRabbit(x, z, opts) {
     if (_rabbitIMesh.count >= RABBIT_MAX) return null;
+    // Never spawn in the creek (MP-synced rabbits skip this — server owns them)
+    if (!(opts && opts.id) && _rabbitWaterBlocked(x, z)) return null;
 
     var y = (typeof getH === 'function') ? getH(x, z) : 0;
     var rotY = (opts && typeof opts.rotY === 'number') ? opts.rotY : Math.random() * Math.PI * 2;
@@ -18881,8 +18941,12 @@ function _tickRabbitAI(dt) {
             r.state = 'fleeing';
             var fleeAngle = Math.atan2(dx, dz);
             var fleeDist = 12 + Math.random() * 8;
-            r.targetX = mx + Math.sin(fleeAngle) * fleeDist;
-            r.targetZ = mz + Math.cos(fleeAngle) * fleeDist;
+            // Away from the player, deflected along the bank if that line
+            // crosses the creek. Boxed in (shouldn't happen) → short straight flee.
+            if (!_rabbitAimDry(r, fleeAngle, fleeDist)) {
+                r.targetX = mx + Math.sin(fleeAngle) * 3;
+                r.targetZ = mz + Math.cos(fleeAngle) * 3;
+            }
             r.stateTimer = 4 + Math.random() * 2;
         }
 
@@ -18894,14 +18958,17 @@ function _tickRabbitAI(dt) {
             r.y = idleY;
 
             if (r.stateTimer <= 0) {
-                r.state = 'hopping';
                 var hopAngle = Math.random() * Math.PI * 2;
                 var hopDist = 2 + Math.random() * 3;
-                r.targetX = mx + Math.sin(hopAngle) * hopDist;
-                r.targetZ = mz + Math.cos(hopAngle) * hopDist;
-                r.hopsLeft = 2 + Math.floor(Math.random() * 4);
-                r.hopPhase = 0;
-                r.stateTimer = r.hopsLeft * 0.5;
+                if (_rabbitAimDry(r, hopAngle, hopDist)) {
+                    r.state = 'hopping';
+                    r.hopsLeft = 2 + Math.floor(Math.random() * 4);
+                    r.hopPhase = 0;
+                    r.stateTimer = r.hopsLeft * 0.5;
+                } else {
+                    // Surrounded by water somehow — sit tight, retry shortly
+                    r.stateTimer = 1 + Math.random() * 2;
+                }
             }
 
             _rabbitDummy.position.set(r.x, r.y, r.z);
@@ -18918,6 +18985,10 @@ function _tickRabbitAI(dt) {
             if (tDist < 0.3 || r.stateTimer <= 0) {
                 r.state = 'idle';
                 r.stateTimer = 3 + Math.random() * 5;
+            } else if (_rabbitWaterBlocked(r.x + (tdx / tDist) * 0.6, r.z + (tdz / tDist) * 0.6)) {
+                // Waterline ahead — stop at the bank
+                r.state = 'idle';
+                r.stateTimer = 2 + Math.random() * 3;
             } else {
                 var speed = RABBIT_HOP_SPEED * dt;
                 r.x += (tdx / tDist) * speed;
@@ -18945,6 +19016,14 @@ function _tickRabbitAI(dt) {
             if (fDist < 1.0 || r.stateTimer <= 0) {
                 r.state = 'idle';
                 r.stateTimer = 5 + Math.random() * 5;
+            } else if (_rabbitWaterBlocked(r.x + (fdx / fDist) * 0.8, r.z + (fdz / fDist) * 0.8)) {
+                // Creek in the flee path — deflect along the bank (the aim
+                // helper fans off the blocked heading); if truly boxed in,
+                // freeze at the waterline.
+                if (!_rabbitAimDry(r, Math.atan2(fdx, fdz), Math.max(4, fDist))) {
+                    r.state = 'idle';
+                    r.stateTimer = 2 + Math.random() * 2;
+                }
             } else {
                 var fSpeed = RABBIT_FLEE_SPEED * dt;
                 r.x += (fdx / fDist) * fSpeed;
@@ -26402,6 +26481,16 @@ let COYOTE_TIME = 0.05;         // 50ms grace period after leaving ground
 // Cliff system (sov_cliff_traversal_design.md): the max-walkable-slope gate.
 let MAX_WALK_SLOPE_DEG = 45;    // steeper than this = unwalkable cliff — must JUMP, not walk, up it
 let SLIDE_SPEED = 6;            // downhill slide speed (m/s) when standing on a too-steep face (no purchase)
+// Swimming (creek water — depth from creek.js getWaterAt). Wading drag starts
+// shallower than this; these gate the full buoyant-swim state.
+let isSwimming = false;         // buoyant physics + swim pose layer active
+let swimPhase = 0;              // stroke cycle timer (drives the swim layer)
+let SWIM_ENTER_DEPTH = 1.15;    // deeper than this = feet leave the bottom (chest-deep on a 1.6u player)
+let SWIM_EXIT_DEPTH  = 0.95;    // shallower than this = feet find bottom again (hysteresis vs ENTER)
+let SWIM_SUBMERGE    = 0.70;    // how far below the surface playerPos (feet) rides while swimming
+let SWIM_SPEED        = 2.6;    // units/sec — steady stroke
+let SWIM_SPRINT_SPEED = 4.3;    // units/sec — hard crawl (drains stamina)
+let SWIM_TURN_RATE    = 3.0;    // rad/sec — heading carve rate (boat-like; 180° in ~1s)
 const FLIP_STREAK_REQUIRED = 5;     // jumps to trigger the flip
 const FLIP_STREAK_WINDOW = 0.6;     // max seconds between landing → next jump-press
 const FLIP_DURATION = 0.7;          // seconds for one full 2π rotation
@@ -26760,6 +26849,64 @@ var _jumpLayer = poseController.registerLayer('jump', {
     }
 });
 
+// ── SWIM LAYER (priority 30) ──
+// Overrides walk/idle/jump while in deep water. Sign conventions per
+// design/sov_animation_conventions.md: positive arm/leg rotation.x = limb
+// swings forward (toward -Z, the face direction); body.x NEGATIVE = forward
+// lean (see the mine/forage hinge). head.x POSITIVE tilts the face UP
+// (derived in the head-look layer above). The body pivots at charGroup
+// origin, so the prone pitch swings the torso forward+up — SWIM_SUBMERGE
+// (player.js constants) is what places the body at the surface visually.
+var _swimMoveBlend = 0;   // 0 = treading, 1 = full stroke — eased so mode changes glide, never snap
+var _swimLayer = poseController.registerLayer('swim', {
+    priority: 30,
+    channels: ['rightArm', 'leftArm', 'rightLeg', 'leftLeg', 'body', 'head', 'headPos'],
+    mode: 'override',
+    blendSpeed: 5,
+    update: function(dt) {
+        var v = this.values;
+        var baseHeadY = 1.455 * (typeof char !== 'undefined' ? char.height : 1);
+
+        // Ease between treading and stroking — the instant prone pitch was
+        // what read as a "snap teleport" (the torso sweeps ~1.5u forward as
+        // the body goes horizontal). ~0.4s each way.
+        _swimMoveBlend += ((isMoving ? 1 : 0) - _swimMoveBlend) * Math.min(1, 3.5 * dt);
+        var mb = _swimMoveBlend;
+        function mix(a, b) { return a + (b - a) * mb; }
+
+        // One continuous phase; cadence ramps up with the mode blend so the
+        // tread sway accelerates INTO the stroke rhythm instead of restarting.
+        swimPhase += dt * (3.0 + mb * (isRunning ? 6.0 : 3.0));
+
+        // Crawl pose — arms alternate big forward reach-overs, legs flutter.
+        // 0.6 (pull) → 2.8 (overhead reach), always forward-positive.
+        var sL = Math.sin(swimPhase);
+        var sR = Math.sin(swimPhase + Math.PI);
+        var kick = Math.sin(swimPhase * 2.2) * 0.30;   // flutter, ~2× stroke rate
+
+        // Tread pose — mostly upright, slow arm sweeps on the surface.
+        var tr = Math.sin(swimPhase);
+        var tk = Math.sin(swimPhase * 1.7) * 0.22;
+
+        v.leftArm.x  = mix(0.35 + tr * 0.12, 1.2 + sL * 0.8);
+        v.rightArm.x = mix(0.35 - tr * 0.12, 1.2 + sR * 0.8);
+        v.leftArm.z  = mix(-0.85 + tr * 0.10, -0.35);  // spread → tucked for strokes
+        v.rightArm.z = mix(0.85 + tr * 0.10, 0.35);
+        v.leftLeg.x  = mix(tk, kick);
+        v.rightLeg.x = mix(-tk, -kick);
+        // Head-up paddle, NOT full prone. body.x pitches around WORLD X (Euler
+        // interplay with yaw) — at ±X headings a big pitch becomes a roll that
+        // drives the head underwater and pokes it under creek banks. Keeping
+        // the torso ≤~30° makes the artifact as invisible as the run lean.
+        // Full prone needs a post-yaw pivot (the flip-pivot pattern) — deferred.
+        v.body.x     = mix(-0.28, -0.50);
+        v.head.x     = mix(0.20, 0.30);     // face out of the water at any heading
+        v.head.y     = 0;
+        v.headPos.y  = baseHeadY;
+        v.headPos.x  = 0;
+    }
+});
+
 // ── HEAD-LOOK LAYER (priority 35, additive) ──
 // Makes the character glance toward where the camera is aiming — "looks around
 // when you move the mouse." Additive on the 'head' channel so it rides ON TOP of
@@ -26857,6 +27004,10 @@ function animateWalk(dt) {
     // Jump layer controlled by jumpAnimBlend
     poseController.setActive('jump', jumpAnimBlend > 0.01);
     poseController.setBlend('jump', jumpAnimBlend);
+
+    // Swim layer rides its own blend ramp (blendSpeed 5) so entering/leaving
+    // water eases rather than snaps. Priority 30 — overrides walk/idle/jump.
+    poseController.setActive('swim', isSwimming);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -27156,6 +27307,42 @@ function updatePlayerMovement(dt) {
         }
     }
 
+    // === WATER STATE (creek) — wading drag + swim enter/exit ===
+    // Depth is measured against the EFFECTIVE floor (terrain + floor extensions)
+    // so standing on a foundation bridging the creek never reads as swimming.
+    var _waterDepth = 0, _waterSurfY = -Infinity;
+    if (typeof getWaterAt === 'function') {
+        const _wRes = getWaterAt(playerPos.x, playerPos.z);
+        if (_wRes.inChannel) {
+            let _wFloor = getH(playerPos.x, playerPos.z);
+            if (typeof _floorExtensions !== 'undefined') {
+                for (let i = 0; i < _floorExtensions.length; i++) {
+                    _wFloor = _floorExtensions[i](playerPos.x, playerPos.z, _wFloor);
+                }
+            }
+            _waterSurfY = _wRes.surfaceY;
+            _waterDepth = Math.max(0, _wRes.surfaceY - _wFloor);
+        }
+    }
+    if (isSwimming) {
+        if (_waterDepth < SWIM_EXIT_DEPTH) isSwimming = false;
+    } else if (_waterDepth > SWIM_ENTER_DEPTH
+               && playerPos.y < _waterSurfY - SWIM_ENTER_DEPTH * 0.5) {
+        // The Y check matters when arriving airborne: deep water below you
+        // isn't swimming until you've actually dropped into it.
+        isSwimming = true;
+        swimPhase = 0;
+        if (jumpVelocity < -3) {
+            // Splashed in from a jump/fall
+            if (typeof spawnDust === 'function') spawnDust(playerPos.x, _waterSurfY, playerPos.z, 6, 2.2);
+            if (typeof window !== 'undefined' && window._haptics) window._haptics.thunk();
+        }
+    }
+    // While swimming you're never grounded — this also disarms the max-walk
+    // slope gate and the steep-slope slide (both isGrounded-gated) so the
+    // channel walls can't zero your velocity underwater.
+    if (isSwimming) isGrounded = false;
+
     // === WOW-STYLE MOVEMENT AND PHYSICS ===
     const _fishActive = typeof isFishingMode !== 'undefined' && isFishingMode;
     isRunning = !!keys['shift'] && !_fishActive;
@@ -27175,12 +27362,26 @@ function updatePlayerMovement(dt) {
         // S backpedals cleanly (player steps away without spinning the rod around).
         // W/A/D also move without rotating the model — full strafe control while fishing.
         if (!_fishActive) {
-            // Rotate character to face movement direction
-            // atan2 gives the angle of the movement vector, but the model faces -Z at rotation 0.
-            // Adding PI converts "direction of travel" to "model facing rotation."
-            // This is NOT a compensation hack — it's the mathematical conversion between
-            // atan2's convention (0 = +Z) and Three.js model facing (0 = -Z).
-            playerYaw = Math.atan2(_mvInput.x, _mvInput.z) + Math.PI;
+            if (isSwimming) {
+                // Boat-like steering: the body carves toward the input direction
+                // at a capped turn rate, and thrust pushes where the body POINTS —
+                // no instant heading snap; direction changes are arcs.
+                const _wantYaw = Math.atan2(_mvInput.x, _mvInput.z) + Math.PI;
+                let _yd = _wantYaw - playerYaw;
+                while (_yd > Math.PI) _yd -= Math.PI * 2;
+                while (_yd < -Math.PI) _yd += Math.PI * 2;
+                const _mt = SWIM_TURN_RATE * dt;
+                playerYaw += Math.max(-_mt, Math.min(_mt, _yd));
+                // Facing → travel direction (inverse of the atan2+π conversion below)
+                _mvInput.set(-Math.sin(playerYaw), 0, -Math.cos(playerYaw));
+            } else {
+                // Rotate character to face movement direction
+                // atan2 gives the angle of the movement vector, but the model faces -Z at rotation 0.
+                // Adding PI converts "direction of travel" to "model facing rotation."
+                // This is NOT a compensation hack — it's the mathematical conversion between
+                // atan2's convention (0 = +Z) and Three.js model facing (0 = -Z).
+                playerYaw = Math.atan2(_mvInput.x, _mvInput.z) + Math.PI;
+            }
         }
     }
 
@@ -27256,8 +27457,20 @@ function updatePlayerMovement(dt) {
         if (slopeNY > 0.77) _slopeSprintReduction = 0.6 + (slopeNY - 0.77) * 2.86; // 0.6→1.0
         else _slopeSprintReduction = 0.4;
     }
-    const maxSpeed = (effectiveRun ? WALK_SPEED + (RUN_SPEED - WALK_SPEED) * _exSprintMult * _slopeSprintReduction : WALK_SPEED * _exWalkMult) * slopeMult * fishSlowMult;
+    let maxSpeed = (effectiveRun ? WALK_SPEED + (RUN_SPEED - WALK_SPEED) * _exSprintMult * _slopeSprintReduction : WALK_SPEED * _exWalkMult) * slopeMult * fishSlowMult;
+    // Water: swimming replaces ground speed entirely; wading drags it down
+    // (knee-deep barely noticed, chest-deep roughly halved).
+    if (isSwimming) {
+        maxSpeed = (effectiveRun ? SWIM_SPRINT_SPEED : SWIM_SPEED) * fishSlowMult;
+    } else if (_waterDepth > 0.25) {
+        maxSpeed *= Math.max(0.40, 1.0 - _waterDepth * 0.50);
+    }
     isMoving = _mvInput.length() > 0;
+
+    // Swim stamina — a steady stroke costs a little, a sprint crawl costs real energy
+    if (isSwimming && isMoving && typeof drainStamina === 'function') {
+        drainStamina((effectiveRun ? 3.0 : 0.6) * dt);
+    }
 
     // ── Uphill sprint stamina drain — flat sprint is free, steep uphill costs energy ──
     if (effectiveRun && isMoving && baseSlopePenalty > 0 && dirFactor > 0.2) {
@@ -27271,21 +27484,28 @@ function updatePlayerMovement(dt) {
 
     if (isMoving) {
         _mvTargetVel.copy(_mvInput).multiplyScalar(maxSpeed);
-        const accel = isGrounded ? GROUND_ACCEL : AIR_ACCEL;
+        // Water has real momentum: speed builds over ~0.5s, not instantly.
+        const accel = isSwimming ? 4.5 : (isGrounded ? GROUND_ACCEL : AIR_ACCEL);
         horizontalVel.x += (_mvTargetVel.x - horizontalVel.x) * Math.min(1, accel * dt);
         horizontalVel.z += (_mvTargetVel.z - horizontalVel.z) * Math.min(1, accel * dt);
-    } else if (isGrounded) {
-        const fric = Math.min(1, GROUND_FRICTION * dt);
+    } else if (isGrounded || isSwimming) {
+        // Swimming: water drag bleeds momentum slowly — let off the keys and
+        // you glide to a stop over ~0.6s instead of braking like on ground.
+        const fric = Math.min(1, (isSwimming ? GROUND_FRICTION * 0.15 : GROUND_FRICTION) * dt);
         horizontalVel.x *= (1 - fric);
         horizontalVel.z *= (1 - fric);
     }
     // In air with no input: preserve momentum (WoW-style coast)
 
-    // Clamp to max speed
+    // Clamp to max speed. In water the clamp is a drag curve, not a wall —
+    // sprint-jumping into the creek carries your speed in and bleeds it off
+    // over a beat (the splash-in glide) instead of stopping you dead.
     const hSpeed = Math.sqrt(horizontalVel.x * horizontalVel.x + horizontalVel.z * horizontalVel.z);
     if (hSpeed > maxSpeed) {
-        horizontalVel.x *= maxSpeed / hSpeed;
-        horizontalVel.z *= maxSpeed / hSpeed;
+        const _clampK = isSwimming ? Math.min(1, 3.0 * dt) : 1;
+        const _clampS = 1 - _clampK * (1 - maxSpeed / hSpeed);
+        horizontalVel.x *= _clampS;
+        horizontalVel.z *= _clampS;
     }
 
     // --- Propose new X/Z position ---
@@ -27455,7 +27675,15 @@ function updatePlayerMovement(dt) {
     }
 
     // Vertical physics
-    if (isGrounded) {
+    if (isSwimming) {
+        // Buoyancy — ease to the surface with a slight bob. No gravity, no
+        // ground snap. Exiting shallow water hands back to the normal branch,
+        // where the short drop to the bottom lands softly.
+        jumpVelocity = 0;
+        const _swimBob = Math.sin(swimPhase * 0.9) * 0.05;
+        const _swimTgtY = Math.max(_waterSurfY - SWIM_SUBMERGE + _swimBob, terrainHeight + 0.05);
+        playerPos.y += (_swimTgtY - playerPos.y) * Math.min(1, 7 * dt);
+    } else if (isGrounded) {
         playerPos.y = terrainHeight;
         jumpVelocity = 0;
     } else {
@@ -58783,6 +59011,7 @@ registerTick('music', function(dt) {
 //   creekFeatures        — array of feature node metadata objects (each carries segmentIdx)
 //   getCreekSurfaceY(x,z) — REAL water surface Y (level across the channel, incl. dam raise)
 //   getCreekWaterInfo(x,z) — surface Y + centerline projection + wetted widths + downstream dir
+//   getWaterAt(x,z)      — cheap gameplay query: {depth, surfaceY, inChannel} (swim/wade/avoid)
 //   creekWalk(x,z,arc)   — move ± world-units ALONG the channel (fish darts follow bends)
 //   CREEK_FEATURES       — feature type constants
 //
@@ -59497,6 +59726,47 @@ function creekWalk(x, z, arcDelta) {
         wetL: Math.min(_rowWetL[r0], _rowWetL[r0 + 1]),
         wetR: Math.min(_rowWetR[r0], _rowWetR[r0 + 1]),
     };
+}
+
+// ── getWaterAt(x, z) — cheap "is there water here, how deep" gameplay query ──
+// For per-frame callers (player swim/wade, animal water behavior). Two things
+// getCreekWaterInfo doesn't give you:
+//   1. An early-out: if no centerline row is within ~1 grid ring (~12-24u),
+//      answer "no water" without the 4-ring expanding search — most of the map
+//      is nowhere near the creek and 30+ animals query this every tick.
+//   2. An honest dry-land answer: the level surface extrapolates sideways
+//      forever; outside the wetted channel (+ margin) depth is clamped to 0 so
+//      a terrain dip near the creek can't read as water.
+// Returns a REUSED object — read the fields immediately, never hold the ref.
+const _waterAtRes = { depth: 0, surfaceY: -Infinity, inChannel: false };
+function getWaterAt(x, z) {
+    _waterAtRes.depth = 0;
+    _waterAtRes.surfaceY = -Infinity;
+    _waterAtRes.inChannel = false;
+
+    const gx = Math.floor(x / _WQ_CELL), gz = Math.floor(z / _WQ_CELL);
+    let near = false;
+    for (let ix = gx - 1; ix <= gx + 1 && !near; ix++) {
+        for (let iz = gz - 1; iz <= gz + 1; iz++) {
+            if (_wqGrid.has(ix + ',' + iz)) { near = true; break; }
+        }
+    }
+    if (!near) return _waterAtRes;
+
+    const info = getCreekWaterInfo(x, z);
+    // Which side of the centerline are we on? Compare against that side's
+    // wetted width (+ margin for row interpolation).
+    const side = ((x - info.cx) * info.perpX + (z - info.cz) * info.perpZ) >= 0
+               ? info.wetR : info.wetL;
+    if (info.dist > side + 2.0) return _waterAtRes;
+
+    const depth = info.y - getH(x, z);
+    if (depth <= 0) return _waterAtRes;
+
+    _waterAtRes.depth = depth;
+    _waterAtRes.surfaceY = info.y;
+    _waterAtRes.inChannel = true;
+    return _waterAtRes;
 }
 
 // Creek bed mesh removed — the terrain's own vertex coloring paints the channel
@@ -63746,18 +64016,15 @@ function _resolveVehicleCollision() {
     let wvx = sinY*vehicleSpeed + cosY*vehicleLateralVel;
     let wvz = cosY*vehicleSpeed - sinY*vehicleLateralVel;
     let hitSpeed = 0, hitX = 0, hitZ = 0;
+    let pushNX = 0, pushNZ = 0; // accumulated push — velocity clips ONCE vs the net
     const vBaseY = vehiclePos.y - V_RIDE_H;
     const vTopY  = vehiclePos.y + 1.4;
 
     function _push(px, pz, nx, nz, pen) {
         vehiclePos.x += nx*pen;
         vehiclePos.z += nz*pen;
-        const vn = wvx*nx + wvz*nz;
-        if (vn < 0) { // moving into the obstacle — clip that component
-            const imp = -(1 + V_COL_REST) * vn;
-            wvx += nx*imp; wvz += nz*imp;
-            if (-vn > hitSpeed) { hitSpeed = -vn; hitX = px; hitZ = pz; }
-        }
+        pushNX += nx*pen; pushNZ += nz*pen;
+        if (hitX === 0 && hitZ === 0) { hitX = px; hitZ = pz; }
     }
 
     // ── registered world objects: trees, rocks, structures ──
@@ -63826,6 +64093,21 @@ function _resolveVehicleCollision() {
                     if (d < V_COL_R && d > 0.001) _push(px, pz, dx/d, dz/d, V_COL_R - d);
                 }
             }
+        }
+    }
+
+    // Clip velocity once against the NET push direction. Per-contact clipping
+    // deadlocks when contacts oppose (wedged between two objects) — the net
+    // clip lets the engine power out of a wedge while a clean head-on still
+    // stops dead (single contact = net IS the contact normal).
+    const pushLen = Math.hypot(pushNX, pushNZ);
+    if (pushLen > 0.0005) {
+        const nx = pushNX/pushLen, nz = pushNZ/pushLen;
+        const vn = wvx*nx + wvz*nz;
+        if (vn < 0) {
+            const imp = -(1 + V_COL_REST) * vn;
+            wvx += nx*imp; wvz += nz*imp;
+            hitSpeed = -vn;
         }
     }
 
@@ -64170,12 +64452,24 @@ function tickVehicle(dt) {
         }
     }
 
-    // ── horizontal movement ──
-    vehiclePos.x += (Math.sin(vehicleYaw)*vehicleSpeed + Math.cos(vehicleYaw)*vehicleLateralVel) * dt;
-    vehiclePos.z += (Math.cos(vehicleYaw)*vehicleSpeed - Math.sin(vehicleYaw)*vehicleLateralVel) * dt;
-
-    // ── collide with trees / rocks / buildings ──
-    _resolveVehicleCollision();
+    // ── horizontal movement + collision, substepped ──
+    // At high speed / low fps a single frame can move the truck a meter+ —
+    // enough to carry a probe past a trunk center so contacts straddle the
+    // body and wedge it permanently. Substep so each move is < ~0.6m and
+    // collision resolves before the next slice.
+    {
+        const mvx0 = Math.sin(vehicleYaw)*vehicleSpeed + Math.cos(vehicleYaw)*vehicleLateralVel;
+        const mvz0 = Math.cos(vehicleYaw)*vehicleSpeed - Math.sin(vehicleYaw)*vehicleLateralVel;
+        const moveDist = Math.hypot(mvx0, mvz0) * dt;
+        const steps = Math.max(1, Math.min(8, Math.ceil(moveDist / 0.6)));
+        const sdt = dt / steps;
+        for (let s = 0; s < steps; s++) {
+            vehiclePos.x += (Math.sin(vehicleYaw)*vehicleSpeed + Math.cos(vehicleYaw)*vehicleLateralVel) * sdt;
+            vehiclePos.z += (Math.cos(vehicleYaw)*vehicleSpeed - Math.sin(vehicleYaw)*vehicleLateralVel) * sdt;
+            _resolveVehicleCollision(); // may zero speed — stop stepping if so
+            if (Math.abs(vehicleSpeed) + Math.abs(vehicleLateralVel) < 0.01) break;
+        }
+    }
 
     // ── update car mesh ──
     if (vehicleMesh) {
@@ -73831,10 +74125,24 @@ _compass.addMarker('ruth', 91, -63, { color: '#d9a94e', label: "ruth's" });
     panel.style.cssText = 'position:fixed; top:10px; left:10px; z-index:99998;' +
         'background:rgba(10,14,18,0.82); color:#cfe8d8; font:12px monospace;' +
         'padding:10px 12px; border-radius:8px; min-width:190px; user-select:none;';
+    // Header row: fps readout + ✕ close. Close hides this panel AND flips
+    // window._perfEnabled off (game_loop's top-right stats box keys on it),
+    // so a stale ?perf=1 in a bookmarked URL doesn't mean permanent overlays.
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;';
     var fpsEl = document.createElement('div');
-    fpsEl.style.cssText = 'font:700 20px monospace; margin-bottom:8px; color:#9f9;';
+    fpsEl.style.cssText = 'font:700 20px monospace; color:#9f9;';
     fpsEl.textContent = '-- fps';
-    panel.appendChild(fpsEl);
+    var closeEl = document.createElement('div');
+    closeEl.textContent = '✕';
+    closeEl.style.cssText = 'cursor:pointer; padding:0 4px; color:#8aa; font:14px monospace;';
+    closeEl.addEventListener('click', function () {
+        panel.style.display = 'none';
+        window._perfEnabled = false;
+    });
+    header.appendChild(fpsEl);
+    header.appendChild(closeEl);
+    panel.appendChild(header);
 
     function addRow(label, initial, onChange) {
         var row = document.createElement('label');
@@ -73919,7 +74227,11 @@ _compass.addMarker('ruth', 91, -63, { color: '#d9a94e', label: "ruth's" });
     }
     mount();
 
-    window._perfToggles = { panel: panel };
+    window._perfToggles = {
+        panel: panel,
+        hide: function () { panel.style.display = 'none'; window._perfEnabled = false; },
+        show: function () { panel.style.display = 'block'; window._perfEnabled = true; },
+    };
 })();
 
 // ═══ game_loop ═════════════════════════════════════════
