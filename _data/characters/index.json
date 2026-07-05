@@ -1,1 +1,28 @@
-{"characters": [{"id": "ruth", "name": "Ruth", "saved_at": "2026-05-03T05:07:28.032Z"}]}
+{
+  "characters": [
+    {
+      "id": "ruth",
+      "name": "Ruth"
+    },
+    {
+      "id": "bruce",
+      "name": "Bruce"
+    },
+    {
+      "id": "matilda",
+      "name": "Matilda"
+    },
+    {
+      "id": "eugene",
+      "name": "Eugene"
+    },
+    {
+      "id": "cliff",
+      "name": "Cliff"
+    },
+    {
+      "id": "hank",
+      "name": "Hank"
+    }
+  ]
+}
