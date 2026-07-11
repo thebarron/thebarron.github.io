@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "hair",
+  "id": "long_back",
+  "name": "Long",
+  "saved_at": "2026-04-26T00:00:00.000Z",
+  "anchor": "head_top",
+  "tags": ["extension", "long"],
+  "primitives": [
+    {
+      "type": "sphere",
+      "params": {
+        "radius": 0.328, "widthSegments": 18, "heightSegments": 12,
+        "phiStart": 0, "phiLength": 6.2832,
+        "thetaStart": 0, "thetaLength": 1.55
+      },
+      "transform": {
+        "position": [0, 0.02, 0], "rotation": [0, 0, 0], "scale": [1.04, 0.97, 1.0]
+      },
+      "material": { "shading": "smooth" },
+      "colorRole": "primary"
+    },
+    {
+      "type": "sphere",
+      "params": {
+        "radius": 0.30, "widthSegments": 16, "heightSegments": 12,
+        "thetaStart": 0.6, "thetaLength": 1.6
+      },
+      "transform": {
+        "position": [0, -0.18, 0.08], "rotation": [0, 0, 0], "scale": [1.05, 1.45, 0.85]
+      },
+      "material": { "shading": "smooth" },
+      "colorRole": "primary"
+    }
+  ]
+}

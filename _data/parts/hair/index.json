@@ -1,0 +1,12 @@
+{
+ "parts": [
+  { "id": "bald", "name": "Bald", "tags": ["crown"] },
+  { "id": "braid_back", "name": "Braid", "tags": ["extension", "braid", "feminine"] },
+  { "id": "braids_front", "name": "Twin Braids", "tags": ["extension", "braid"] },
+  { "id": "buzz", "name": "Buzz", "tags": ["crown", "short"] },
+  { "id": "long_back", "name": "Long", "tags": ["extension", "long"] },
+  { "id": "ponytail", "name": "Ponytail", "tags": ["extension", "ponytail"] },
+  { "id": "short_cap", "name": "Short", "tags": ["crown", "short"] },
+  { "id": "shoulder_length", "name": "Shoulder", "tags": ["crown", "long"] }
+ ]
+}

@@ -1,0 +1,30 @@
+{
+ "schema_version": 1,
+ "kind": "beard",
+ "id": "mustache_classic",
+ "name": "Classic",
+ "saved_at": "2026-07-05T00:00:00.000Z",
+ "anchor": "face",
+ "tags": [
+  "mustache"
+ ],
+ "glb": {
+  "file": "_assets/models/accessories/mustache_classic.glb",
+  "pos": [
+   0,
+   -0.095,
+   -0.27
+  ],
+  "rot": [
+   0,
+   3.14159,
+   0
+  ],
+  "scale": 0.0068,
+  "recolor": "primary",
+  "materials": {
+   "795548": "frame"
+  }
+ },
+ "primitives": []
+}

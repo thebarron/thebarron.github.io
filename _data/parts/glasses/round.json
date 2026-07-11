@@ -1,0 +1,32 @@
+{
+ "schema_version": 1,
+ "kind": "glasses",
+ "id": "round",
+ "name": "Round",
+ "saved_at": "2026-07-05T00:00:00.000Z",
+ "anchor": "face",
+ "tags": [
+  "glasses"
+ ],
+ "glb": {
+  "file": "_assets/models/accessories/round_glasses.glb",
+  "pos": [
+   0,
+   0.005,
+   -0.27
+  ],
+  "rot": [
+   0,
+   3.14159,
+   0
+  ],
+  "scale": 0.22,
+  "recolor": "primary",
+  "materials": {
+   "Gold": "frame",
+   "black": "shade",
+   "Material.037": "lens"
+  }
+ },
+ "primitives": []
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "hair",
+  "id": "buzz",
+  "name": "Buzz",
+  "saved_at": "2026-07-05T00:00:00.000Z",
+  "anchor": "head_top",
+  "tags": ["crown", "short"],
+  "primitives": [
+    { "type": "sphere",
+      "params": { "radius": 0.313, "widthSegments": 18, "heightSegments": 14, "thetaLength": 1.75 },
+      "transform": { "position": [0, 0.0, 0.015], "rotation": [0.5, 0, 0], "scale": [1.008, 1.0, 1.0] },
+      "material": { "shading": "smooth" }, "colorRole": "primary" }
+  ]
+}

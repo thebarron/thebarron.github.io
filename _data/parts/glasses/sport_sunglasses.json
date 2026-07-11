@@ -1,0 +1,31 @@
+{
+ "schema_version": 1,
+ "kind": "glasses",
+ "id": "sport_sunglasses",
+ "name": "Sport Shade",
+ "saved_at": "2026-07-05T00:00:00.000Z",
+ "anchor": "face",
+ "tags": [
+  "glasses"
+ ],
+ "glb": {
+  "file": "_assets/models/accessories/sport_sunglasses.glb",
+  "pos": [
+   0,
+   0.01,
+   -0.26
+  ],
+  "rot": [
+   0,
+   3.14159,
+   0
+  ],
+  "scale": 0.62,
+  "recolor": "primary",
+  "materials": {
+   "Plastic_Main": "frame",
+   "Lens": "lens"
+  }
+ },
+ "primitives": []
+}

@@ -1,0 +1,163 @@
+{
+ "schema_version": 1,
+ "kind": "hair",
+ "id": "ponytail",
+ "name": "Ponytail",
+ "saved_at": "2026-07-05T00:00:00.000Z",
+ "anchor": "head_back",
+ "tags": [
+  "extension",
+  "ponytail"
+ ],
+ "primitives": [
+  {
+   "type": "sphere",
+   "params": {
+    "radius": 0.328,
+    "widthSegments": 18,
+    "heightSegments": 12,
+    "thetaLength": 1.55
+   },
+   "transform": {
+    "position": [
+     0,
+     0.02,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "scale": [
+     1.04,
+     0.96,
+     0.99
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "primary",
+   "crown": true
+  },
+  {
+   "type": "sphere",
+   "params": {
+    "radius": 0.052,
+    "widthSegments": 10,
+    "heightSegments": 8
+   },
+   "transform": {
+    "position": [
+     0,
+     0.04,
+     0.29
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "scale": [
+     1.1,
+     0.8,
+     1.0
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "secondary"
+  },
+  {
+   "type": "cylinder",
+   "params": {
+    "radiusTop": 0.055,
+    "radiusBottom": 0.042,
+    "height": 0.16,
+    "radialSegments": 10
+   },
+   "transform": {
+    "position": [
+     0,
+     -0.03,
+     0.315
+    ],
+    "rotation": [
+     -0.35,
+     0,
+     0
+    ],
+    "scale": [
+     1,
+     1,
+     1
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "primary"
+  },
+  {
+   "type": "cylinder",
+   "params": {
+    "radiusTop": 0.042,
+    "radiusBottom": 0.024,
+    "height": 0.34,
+    "radialSegments": 10
+   },
+   "transform": {
+    "position": [
+     0,
+     -0.27,
+     0.345
+    ],
+    "rotation": [
+     -0.06,
+     0,
+     0
+    ],
+    "scale": [
+     1,
+     1,
+     1
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "primary"
+  },
+  {
+   "type": "sphere",
+   "params": {
+    "radius": 0.026,
+    "widthSegments": 8,
+    "heightSegments": 6
+   },
+   "transform": {
+    "position": [
+     0,
+     -0.445,
+     0.355
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "scale": [
+     0.9,
+     1.2,
+     0.9
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "primary"
+  }
+ ]
+}

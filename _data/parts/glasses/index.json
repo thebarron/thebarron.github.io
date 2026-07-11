@@ -1,0 +1,32 @@
+{
+ "parts": [
+  {
+   "id": "round",
+   "name": "Round",
+   "tags": [
+    "glasses"
+   ]
+  },
+  {
+   "id": "sport",
+   "name": "Sport",
+   "tags": [
+    "glasses"
+   ]
+  },
+  {
+   "id": "sport_sunglasses",
+   "name": "Sport Shade",
+   "tags": [
+    "glasses"
+   ]
+  },
+  {
+   "id": "frog_sunglasses",
+   "name": "Frog Shade",
+   "tags": [
+    "glasses"
+   ]
+  }
+ ]
+}

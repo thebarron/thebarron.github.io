@@ -1,0 +1,129 @@
+{
+ "schema_version": 1,
+ "kind": "beard",
+ "id": "walrus",
+ "name": "Walrus",
+ "saved_at": "2026-07-05T00:00:00.000Z",
+ "anchor": "chin",
+ "tags": [
+  "mustache"
+ ],
+ "primitives": [
+  {
+   "type": "sphere",
+   "params": {
+    "radius": 0.08,
+    "widthSegments": 10,
+    "heightSegments": 8
+   },
+   "transform": {
+    "position": [
+     -0.048,
+     -0.09,
+     -0.262
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "scale": [
+     1.3,
+     0.62,
+     0.5
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "primary"
+  },
+  {
+   "type": "sphere",
+   "params": {
+    "radius": 0.08,
+    "widthSegments": 10,
+    "heightSegments": 8
+   },
+   "transform": {
+    "position": [
+     0.048,
+     -0.09,
+     -0.262
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "scale": [
+     1.3,
+     0.62,
+     0.5
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "primary"
+  },
+  {
+   "type": "sphere",
+   "params": {
+    "radius": 0.04,
+    "widthSegments": 10,
+    "heightSegments": 8
+   },
+   "transform": {
+    "position": [
+     -0.115,
+     -0.145,
+     -0.245
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "scale": [
+     0.8,
+     1.0,
+     0.55
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "primary"
+  },
+  {
+   "type": "sphere",
+   "params": {
+    "radius": 0.04,
+    "widthSegments": 10,
+    "heightSegments": 8
+   },
+   "transform": {
+    "position": [
+     0.115,
+     -0.145,
+     -0.245
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "scale": [
+     0.8,
+     1.0,
+     0.55
+    ]
+   },
+   "material": {
+    "shading": "smooth"
+   },
+   "colorRole": "primary"
+  }
+ ]
+}

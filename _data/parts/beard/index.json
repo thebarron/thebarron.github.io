@@ -1,0 +1,60 @@
+{
+ "parts": [
+  {
+   "id": "bigbeard",
+   "name": "Big Beard",
+   "tags": [
+    "chin"
+   ]
+  },
+  {
+   "id": "short_beard",
+   "name": "Short",
+   "tags": [
+    "chin"
+   ]
+  },
+  {
+   "id": "medium_beard",
+   "name": "Medium",
+   "tags": [
+    "chin"
+   ]
+  },
+  {
+   "id": "mustache",
+   "name": "Mustache",
+   "tags": [
+    "mustache"
+   ]
+  },
+  {
+   "id": "long_mustache",
+   "name": "Long",
+   "tags": [
+    "mustache"
+   ]
+  },
+  {
+   "id": "handlebar",
+   "name": "Handlebar",
+   "tags": [
+    "mustache"
+   ]
+  },
+  {
+   "id": "walrus",
+   "name": "Walrus",
+   "tags": [
+    "mustache"
+   ]
+  },
+  {
+   "id": "mustache_classic",
+   "name": "Classic",
+   "tags": [
+    "mustache"
+   ]
+  }
+ ]
+}

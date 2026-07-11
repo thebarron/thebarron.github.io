@@ -1,0 +1,30 @@
+{
+ "schema_version": 1,
+ "kind": "glasses",
+ "id": "sport",
+ "name": "Sport",
+ "saved_at": "2026-07-05T00:00:00.000Z",
+ "anchor": "face",
+ "tags": [
+  "glasses"
+ ],
+ "glb": {
+  "file": "_assets/models/accessories/sport_glasses.glb",
+  "pos": [
+   0,
+   0.01,
+   -0.26
+  ],
+  "rot": [
+   0,
+   3.14159,
+   0
+  ],
+  "scale": 0.016,
+  "recolor": "primary",
+  "materials": {
+   "1A1A1A": "frame"
+  }
+ },
+ "primitives": []
+}

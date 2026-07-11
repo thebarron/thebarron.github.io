@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "beard",
+  "id": "long_mustache",
+  "name": "Long Mustache",
+  "saved_at": "2026-05-01T00:00:00.000Z",
+  "anchor": "chin",
+  "tags": ["mustache"],
+  "primitives": [
+    {
+      "type": "sphere",
+      "params": { "radius": 0.075, "widthSegments": 9, "heightSegments": 7 },
+      "transform": {
+        "position": [-0.045, -0.085, -0.265], "rotation": [0, 0, 0.18], "scale": [1.725, 0.42, 0.45]
+      },
+      "material": { "shading": "smooth" },
+      "colorRole": "primary"
+    },
+    {
+      "type": "sphere",
+      "params": { "radius": 0.075, "widthSegments": 9, "heightSegments": 7 },
+      "transform": {
+        "position": [0.045, -0.085, -0.265], "rotation": [0, 0, -0.18], "scale": [1.725, 0.42, 0.45]
+      },
+      "material": { "shading": "smooth" },
+      "colorRole": "primary"
+    }
+  ]
+}
