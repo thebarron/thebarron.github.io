@@ -1,0 +1,377 @@
+{
+  "schema_version": 1,
+  "id": "homestead_test",
+  "savedAt": "2026-07-06T06:52:40.945Z",
+  "saveVersion": 2,
+  "zone": {
+    "x": 31,
+    "z": 188,
+    "r": 60
+  },
+  "providers": {
+    "building": {
+      "pieces": []
+    },
+    "structures": [],
+    "foodForest": {
+      "plantings": []
+    },
+    "terrainDeform": {
+      "mods": []
+    }
+  },
+  "capture": {
+    "trees": [
+      {
+        "species": "gambelOak",
+        "x": -15.98,
+        "z": 173.56,
+        "scale": 1.663
+      },
+      {
+        "species": "gambelOak",
+        "x": 51.03,
+        "z": 199.36,
+        "scale": 1.72
+      },
+      {
+        "species": "gambelOak",
+        "x": 47.41,
+        "z": 222.57,
+        "scale": 1.691
+      },
+      {
+        "species": "ponderosa",
+        "x": 38.71,
+        "z": 153,
+        "scale": 2.623
+      },
+      {
+        "species": "ponderosa",
+        "x": 37.37,
+        "z": 213.62,
+        "scale": 2.695
+      },
+      {
+        "species": "gambelOak",
+        "x": 47.77,
+        "z": 174.79,
+        "scale": 1.653
+      },
+      {
+        "species": "juniper",
+        "x": -3.8,
+        "z": 164.32,
+        "scale": 2.709
+      },
+      {
+        "species": "ponderosa",
+        "x": -14.55,
+        "z": 194.26,
+        "scale": 2.548
+      },
+      {
+        "species": "pinon",
+        "x": 34.58,
+        "z": 173.57,
+        "scale": 3.511
+      },
+      {
+        "species": "pinon",
+        "x": 33.7,
+        "z": 201.58,
+        "scale": 3.553
+      },
+      {
+        "species": "gambelOak",
+        "x": 84.81,
+        "z": 175.8,
+        "scale": 1.609
+      },
+      {
+        "species": "douglasFir",
+        "x": 29.43,
+        "z": 235.28,
+        "scale": 2.801
+      },
+      {
+        "species": "aspen",
+        "x": 85.59,
+        "z": 170.92,
+        "scale": 1.798
+      },
+      {
+        "species": "ponderosa",
+        "x": 45.51,
+        "z": 175.58,
+        "scale": 2.752
+      },
+      {
+        "species": "gambelOak",
+        "x": 72.33,
+        "z": 152.78,
+        "scale": 1.607
+      },
+      {
+        "species": "gambelOak",
+        "x": 40.68,
+        "z": 138.86,
+        "scale": 1.867
+      },
+      {
+        "species": "gambelOak",
+        "x": 74.09,
+        "z": 204.53,
+        "scale": 1.666
+      },
+      {
+        "species": "gambelOak",
+        "x": 85.59,
+        "z": 195.84,
+        "scale": 1.748
+      },
+      {
+        "species": "juniper",
+        "x": 11.61,
+        "z": 147.16,
+        "scale": 2.683
+      },
+      {
+        "species": "gambelOak",
+        "x": 4.49,
+        "z": 214.98,
+        "scale": 1.689
+      },
+      {
+        "species": "gambelOak",
+        "x": 42.73,
+        "z": 229.07,
+        "scale": 1.678
+      },
+      {
+        "species": "ponderosa",
+        "x": 16.59,
+        "z": 170.95,
+        "scale": 2.378
+      },
+      {
+        "species": "gambelOak",
+        "x": 43.02,
+        "z": 158.57,
+        "scale": 1.923
+      },
+      {
+        "species": "gambelOak",
+        "x": 59.45,
+        "z": 152.1,
+        "scale": 1.555
+      },
+      {
+        "species": "gambelOak",
+        "x": 72.35,
+        "z": 157.64,
+        "scale": 1.783
+      },
+      {
+        "species": "juniper",
+        "x": 13.28,
+        "z": 144.79,
+        "scale": 2.497
+      },
+      {
+        "species": "aspen",
+        "x": 22.3,
+        "z": 234.39,
+        "scale": 1.96
+      },
+      {
+        "species": "gambelOak",
+        "x": 41.12,
+        "z": 141.58,
+        "scale": 1.844
+      }
+    ],
+    "forageables": [
+      {
+        "species": "rock_pickup",
+        "x": -6.96,
+        "z": 159.05
+      },
+      {
+        "species": "rock_pickup",
+        "x": 1.47,
+        "z": 146.6
+      },
+      {
+        "species": "rock_pickup",
+        "x": 26.81,
+        "z": 143.6
+      },
+      {
+        "species": "rock_pickup",
+        "x": -2.22,
+        "z": 209.68
+      },
+      {
+        "species": "rock_pickup",
+        "x": -28.15,
+        "z": 187.69
+      },
+      {
+        "species": "rock_pickup",
+        "x": 37.69,
+        "z": 202.54
+      },
+      {
+        "species": "rock_pickup",
+        "x": -9.7,
+        "z": 189.25
+      },
+      {
+        "species": "rock_pickup",
+        "x": 29.6,
+        "z": 153.52
+      },
+      {
+        "species": "chanterelle",
+        "x": 83.9,
+        "z": 161.55
+      },
+      {
+        "species": "raspberry",
+        "x": 66.9,
+        "z": 236.04
+      },
+      {
+        "species": "currant",
+        "x": 6.21,
+        "z": 180.23
+      },
+      {
+        "species": "currant",
+        "x": 45.7,
+        "z": 150.53
+      },
+      {
+        "species": "currant",
+        "x": 9.76,
+        "z": 153.34
+      },
+      {
+        "species": "currant",
+        "x": 10.53,
+        "z": 177.54
+      },
+      {
+        "species": "currant",
+        "x": 8.47,
+        "z": 175.49
+      },
+      {
+        "species": "currant",
+        "x": 13.85,
+        "z": 176.66
+      },
+      {
+        "species": "currant",
+        "x": 41.46,
+        "z": 129.93
+      },
+      {
+        "species": "currant",
+        "x": 41.26,
+        "z": 132.82
+      },
+      {
+        "species": "miners_lettuce",
+        "x": 72.38,
+        "z": 148.37
+      },
+      {
+        "species": "miners_lettuce",
+        "x": -12.58,
+        "z": 169.14
+      },
+      {
+        "species": "miners_lettuce",
+        "x": -11.46,
+        "z": 168.3
+      },
+      {
+        "species": "wild_carrot",
+        "x": -13.35,
+        "z": 159.66
+      },
+      {
+        "species": "wild_carrot",
+        "x": -14.19,
+        "z": 157.2
+      },
+      {
+        "species": "yarrow",
+        "x": 46.71,
+        "z": 193.28
+      },
+      {
+        "species": "yarrow",
+        "x": 47.46,
+        "z": 192.4
+      },
+      {
+        "species": "yarrow",
+        "x": 54.21,
+        "z": 227.39
+      },
+      {
+        "species": "dandelion",
+        "x": 28.57,
+        "z": 146.44
+      },
+      {
+        "species": "dandelion",
+        "x": 28.47,
+        "z": 147.84
+      },
+      {
+        "species": "dandelion",
+        "x": 27.12,
+        "z": 145.45
+      },
+      {
+        "species": "dandelion",
+        "x": 70.76,
+        "z": 163.17
+      },
+      {
+        "species": "dandelion",
+        "x": 68.9,
+        "z": 163.41
+      },
+      {
+        "species": "columbine",
+        "x": 46.04,
+        "z": 174.18
+      },
+      {
+        "species": "columbine",
+        "x": 66.56,
+        "z": 212.86
+      },
+      {
+        "species": "yucca",
+        "x": 61.74,
+        "z": 195.59
+      },
+      {
+        "species": "yucca",
+        "x": 30.42,
+        "z": 161.36
+      },
+      {
+        "species": "yucca",
+        "x": 14.68,
+        "z": 141.59
+      }
+    ]
+  }
+}
